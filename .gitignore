@@ -1,0 +1,31 @@
+# Datasets — too large for git
+data/raw/
+data/processed/
+test/
+
+# Archives
+*.zip
+
+# Model weights — too large for git
+outputs/checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Credentials
+kaggle.json
+.env
+
+# MLflow
+mlruns/
