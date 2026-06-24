@@ -41,17 +41,17 @@ def test_compute_auc_random():
     assert 0.3 < auc < 0.7, "Random predictions should yield AUC near 0.5"
 
 
-def test_ece_perfect_calibration():
-    """When confidence matches accuracy exactly, ECE should be ~0."""
+def test_ece_all_correct_high_confidence():
+    """All predictions correct with high confidence should yield low ECE."""
     probs = np.array([
-        [0.1, 0.9],
-        [0.2, 0.8],
-        [0.3, 0.7],
-        [0.05, 0.95],
+        [0.02, 0.98],
+        [0.03, 0.97],
+        [0.01, 0.99],
+        [0.04, 0.96],
     ])
     labels = np.array([1, 1, 1, 1])
     ece = compute_ece(probs, labels, n_bins=10)
-    assert ece < 0.05, f"ECE should be near 0 for perfect calibration, got {ece}"
+    assert ece < 0.05, f"ECE should be near 0 when correct and confident, got {ece}"
 
 
 def test_ece_worst_case():
