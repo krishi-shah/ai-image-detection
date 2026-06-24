@@ -51,15 +51,15 @@ The primary training and evaluation dataset is **CIFAKE** (Bird & Lotfi, 2024), 
 | Format | RGB (3 channels) |
 | Classes | FAKE (class 0), REAL (class 1) |
 
-**Dataset splits:**
+**Dataset splits** (verified in notebook 03, Cell 14):
 
-| Split | FAKE | REAL | Total | % FAKE |
+| Split | FAKE (0) | REAL (1) | Total | % FAKE |
 |---|---|---|---|---|
-| Train | ~24,000 | ~24,000 | ~48,000 | ~50% |
-| Validation | ~6,000 | ~6,000 | ~12,000 | ~50% |
-| Test | 10,000 | 10,000 | 20,000 | 50% |
+| Train | 39,962 | 40,038 | 80,000 | 50.0% |
+| Validation | 10,038 | 9,962 | 20,000 | 50.2% |
+| Test | 10,000 | 10,000 | 20,000 | 50.0% |
 
-The train/validation split is created by randomly splitting the CIFAKE training folder 80/20 with a fixed seed (42) for reproducibility. The test set is the separate CIFAKE test folder. Class balance is verified programmatically in the notebook (see Cell 14).
+The train/validation split is created by randomly splitting the CIFAKE training folder 80/20 with a fixed seed (42) for reproducibility. The test set is the separate CIFAKE test folder (20,000 images). All three splits are balanced at approximately 50% FAKE / 50% REAL.
 
 **Both REAL and FAKE images use the identical preprocessing pipeline** — they are loaded together via PyTorch's `ImageFolder`, which applies the same transforms to all images regardless of class.
 
@@ -142,41 +142,94 @@ Both classes pass through the same `ImageFolder` pipeline with the same transfor
 
 ### 6.1 Overall Performance
 
+The trained checkpoint (epoch 2, validation accuracy 0.9694) was evaluated on the 20,000-image CIFAKE test set:
+
 | Metric | Value |
 |---|---|
 | Test Accuracy | **96.96%** |
 | AUC-ROC | **0.9971** |
-| ECE (before calibration) | 0.0026 |
-| ECE (after calibration) | 0.0113 |
+| ECE (before calibration, test set) | 0.0026 |
+| ECE (after calibration, test set) | 0.0113 |
 | Learned Temperature | 1.2189 |
+| Checkpoint val_acc | 0.9694 |
+
+Validation-set calibration metrics (used to learn *T*):
+
+| Metric | Value |
+|---|---|
+| ECE (before calibration, validation set) | 0.0031 |
+| ECE (after calibration, validation set) | 0.0116 |
+| Validation set size | 20,000 (10,038 FAKE, 9,962 REAL) |
 
 ### 6.2 Per-Class Performance
 
-The confusion matrix and per-class classification report confirm that both classes achieve similar performance — there is no systematic imbalance between FAKE and REAL classification:
+The per-class classification report on the CIFAKE test set (notebook 03, Cell 11) shows that both classes achieve similar precision, recall, and F1 — there is no systematic imbalance in per-class performance:
 
-| Class | Precision | Recall | F1 |
-|---|---|---|---|
-| FAKE (class 0) | ~0.99 | ~0.95 | ~0.97 |
-| REAL (class 1) | ~0.95 | ~0.99 | ~0.97 |
+```
+                precision    recall  f1-score   support
 
-*(Exact values are computed in notebook 03, Cell 11.)*
+FAKE (class 0)     0.9858    0.9529    0.9691     10000
+REAL (class 1)     0.9544    0.9863    0.9701     10000
 
-The confusion matrix shows that the model's errors are roughly symmetric — a small number of FAKE images are misclassified as REAL, and a similar small number of REAL images are misclassified as FAKE.
+      accuracy                         0.9696     20000
+     macro avg     0.9701    0.9696    0.9696     20000
+  weighted avg     0.9701    0.9696    0.9696     20000
+```
+
+| Class | Precision | Recall | F1-Score | Support |
+|---|---|---|---|---|
+| FAKE (class 0) | 0.9858 | 0.9529 | 0.9691 | 10,000 |
+| REAL (class 1) | 0.9544 | 0.9863 | 0.9701 | 10,000 |
+| **Accuracy** | | | **0.9696** | **20,000** |
+| Macro avg | 0.9701 | 0.9696 | 0.9696 | 20,000 |
+| Weighted avg | 0.9701 | 0.9696 | 0.9696 | 20,000 |
+
+Both classes perform at approximately 97% across all metrics. FAKE recall is 95.29% and REAL recall is 98.63% — not the ~72% figure sometimes observed in individual sample confidence scores from Grad-CAM (see Section 7.1).
+
+**Confusion matrix** (notebook 03, Cell 10):
+
+|  | Predicted FAKE | Predicted REAL |
+|---|---|---|
+| **Actual FAKE** | 9,529 (TP) | 471 (FN) |
+| **Actual REAL** | 137 (FP) | 9,863 (TN) |
+
+- FAKE images correctly classified: 9,529 / 10,000 (95.29%)
+- REAL images correctly classified: 9,863 / 10,000 (98.63%)
+- FAKE misclassified as REAL (false negatives): 471
+- REAL misclassified as FAKE (false positives): 137
+
+Plot saved to `outputs/plots/confusion_matrix.png`.
 
 ### 6.3 ROC Curve
 
-The ROC curve (notebook 03, Cell 12) shows near-perfect discrimination with AUC = 0.9971, confirming the model performs well across all possible decision thresholds.
+The ROC curve (notebook 03, Cell 12) shows near-perfect discrimination with **AUC-ROC = 0.9971**, confirming the model performs well across all possible decision thresholds. Plot saved to `outputs/plots/roc_curve.png`.
 
 ### 6.4 Predicted Probability Distributions
 
 Histograms of P(FAKE) for actual FAKE and actual REAL images (notebook 03, Cell 13) show well-separated distributions:
-- Actual FAKE images cluster near P(FAKE) ≈ 1.0
-- Actual REAL images cluster near P(FAKE) ≈ 0.0
+
+| True class | Mean P(FAKE) | Median P(FAKE) |
+|---|---|---|
+| Actual FAKE | 0.9293 | 0.9983 |
+| Actual REAL | 0.0244 | 0.0000 |
+
+- Actual FAKE images cluster near P(FAKE) ≈ 1.0 (median 0.9983)
+- Actual REAL images cluster near P(FAKE) ≈ 0.0 (median 0.0000)
 - Very few images fall near the decision boundary at P(FAKE) = 0.5
+
+Plot saved to `outputs/plots/probability_histograms.png`.
 
 ### 6.5 Train/Val/Test Balance Verification
 
-The dataset splits are verified to be balanced (notebook 03, Cell 14), with approximately 50% FAKE and 50% REAL in each of the train, validation, and test splits.
+The dataset splits are verified to be balanced (notebook 03, Cell 14):
+
+| Split | FAKE (0) | REAL (1) | Total | % FAKE |
+|---|---|---|---|---|
+| Train | 39,962 | 40,038 | 80,000 | 50.0% |
+| Validation | 10,038 | 9,962 | 20,000 | 50.2% |
+| Test | 10,000 | 10,000 | 20,000 | 50.0% |
+
+The same preprocessing pipeline is applied to both REAL and FAKE images in all splits (via `ImageFolder`).
 
 ### 6.6 Threshold Sensitivity Analysis
 
@@ -198,11 +251,37 @@ All metrics remain above 91% across the entire threshold range, demonstrating mo
 
 **Important clarification:** The temperature parameter T is **learned from the validation set**, not set manually. It is optimised using L-BFGS to minimise negative log-likelihood on validation logits (implemented in `src/evaluation/calibration.py`, function `find_temperature()`).
 
-- **Learned temperature:** T = 1.2189
-- **ECE before calibration:** 0.0026 (test set)
-- **ECE after calibration:** 0.0113 (test set)
+| Set | ECE before | ECE after | Temperature |
+|---|---|---|---|
+| Validation (used to learn *T*) | 0.0031 | 0.0116 | 1.2189 |
+| Test (held-out evaluation) | 0.0026 | 0.0113 | 1.2189 |
 
-The model was already very well-calibrated before temperature scaling (ECE = 0.0026 is extremely low). Applying temperature scaling slightly increased ECE, which is expected when the model is already near-perfectly calibrated — the single-parameter adjustment over-corrects slightly. Reliability diagrams before and after calibration are generated in notebook 03 (Cells 3 and 5), showing the pre-calibration bars already lie very close to the perfect calibration diagonal.
+The model was already very well-calibrated before temperature scaling (test ECE = 0.0026). Applying temperature scaling increased ECE on both validation and test sets (to 0.0116 and 0.0113 respectively), meaning the single-parameter adjustment over-corrected an already well-calibrated model. Temperature scaling optimises negative log-likelihood, not ECE directly.
+
+Reliability diagrams before and after calibration are saved to:
+- `outputs/plots/reliability_pre_calibration.png`
+- `outputs/plots/reliability_post_calibration.png`
+- `outputs/plots/calibration_comparison.png`
+
+### 6.8 Generated Figures
+
+All diagnostic plots from notebook 03 are saved under `outputs/plots/`:
+
+| Plot | Filename |
+|---|---|
+| Confusion matrix | `confusion_matrix.png` |
+| ROC curve | `roc_curve.png` |
+| Probability histograms | `probability_histograms.png` |
+| Misclassified FAKE images | `misclassified_fakes.png` |
+| Threshold — accuracy | `threshold_accuracy.png` |
+| Threshold — precision/recall | `threshold_precision_recall.png` |
+| Threshold — F1 | `threshold_f1.png` |
+| Threshold — all metrics | `threshold_all_metrics.png` |
+| Reliability (pre-calibration) | `reliability_pre_calibration.png` |
+| Reliability (post-calibration) | `reliability_post_calibration.png` |
+| Calibration comparison | `calibration_comparison.png` |
+
+Structured results are saved to `outputs/results/baseline_results.json` and `outputs/results/threshold_analysis.json`.
 
 ---
 
@@ -210,18 +289,29 @@ The model was already very well-calibrated before temperature scaling (ECE = 0.0
 
 ### 7.1 Clarification on Per-Class Performance
 
-An earlier observation noted that two FAKE images in the Grad-CAM notebook had confidence scores of 70–72%. It is important to clarify that **these are confidence scores, not per-class accuracy**. The model predicted those images correctly as FAKE, but with 70–72% certainty rather than 99%+. The per-class classification report (Section 6.2) confirms that both FAKE and REAL classes achieve ~97% accuracy — there is no systematic performance imbalance between classes.
+An earlier observation noted that two FAKE images in the Grad-CAM notebook had **confidence scores** of 70–72%. It is important to clarify that **these are per-sample confidence scores, not per-class accuracy or recall**.
+
+On the full 20,000-image test set, per-class performance is balanced:
+
+- **FAKE recall:** 95.29% (9,529 / 10,000 correctly detected)
+- **REAL recall:** 98.63% (9,863 / 10,000 correctly detected)
+- **FAKE precision:** 98.58%
+- **REAL precision:** 95.44%
+
+There is no systematic imbalance where REAL images are classified at >90% while FAKE images are classified at ~72%. Both classes achieve ~97% F1-score. The 70–72% values refer to how confident the model was on two individual FAKE samples that it still classified correctly.
 
 The lower confidence on those specific FAKE images indicates the model found them harder to distinguish, which is a sign of good calibration — the model appropriately signals reduced certainty on ambiguous inputs rather than making overconfident predictions.
 
 ### 7.2 Misclassified FAKE Images
 
-Notebook 03 (Cell 15) identifies FAKE images that were misclassified as REAL. These represent the FAKE images the model found most realistic. Visual inspection reveals they tend to have:
+Notebook 03 (Cell 15) identifies **471 FAKE images misclassified as REAL** out of 10,000 (4.71% false-negative rate). A grid of the most confidently misclassified samples is saved to `outputs/plots/misclassified_fakes.png`.
+
+Visual inspection of these images suggests they tend to have:
 - Fewer visible Stable Diffusion artifacts (smoother textures, more natural colour distributions)
 - Content compositions that closely resemble natural photographs
 - Less of the subtle over-smoothing that characterises typical CIFAKE AI-generated images
 
-This is consistent with Gragnaniello et al. (2021), who found that some generated images fall closer to the decision boundary in feature space due to reduced generator-specific artifacts.
+These are the FAKE images the model found most realistic — they sit closest to the decision boundary in probability space (higher P(REAL)). This is consistent with Gragnaniello et al. (2021), who found that some generated images fall closer to the decision boundary in feature space due to reduced generator-specific artifacts.
 
 ### 7.3 Grad-CAM Findings
 
@@ -252,7 +342,7 @@ Temperature scaling learned T = 1.2189, confirming the model was slightly overco
 
 | Milestone | Period | Tasks |
 |---|---|---|
-| 4 — Generalisation Study | July 6–20 | Evaluate detector on StyleGAN, Stable Diffusion, Midjourney v6, and GPT-4o images using GenImage dataset. Measure performance degradation. Analyse failure cases with Grad-CAM. Submit progress report. |
+| 4 — Generalisation Study | July 6–20 | Evaluate detector on StyleGAN, Stable Diffusion, Midjourney v6, and GPT-4o images using GenImage dataset. Measure performance degradation. Analyse failure cases with Grad-CAM. |
 | 5 — Interactive Demo | July 21–Aug 10 | Build Gradio web interface combining model, calibration, and Grad-CAM. End-to-end testing. |
 | 6 — Final Report | Aug 11–28 | Write final report. Prepare visualisations. Finalise codebase and documentation. Prepare presentation. |
 
