@@ -1,0 +1,11 @@
+{
+  "dataset": "CIFAKE",
+  "model": "EfficientNet-B3",
+  "checkpoint_epoch": 2,
+  "test_accuracy": 0.9696,
+  "test_auc": 0.9971,
+  "ece_before_calibration": 0.0026,
+  "ece_after_calibration": 0.0113,
+  "temperature": 1.2189,
+  "checkpoint_path": "outputs/checkpoints/best_detector.pth"
+}
