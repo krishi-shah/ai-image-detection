@@ -36,39 +36,49 @@ This project investigates the generalisation gap in AI-generated image detection
 ai-image-detection/
 ├── data/
 │   ├── raw/                        # Original downloaded datasets (gitignored)
-│   └── processed/                  # Preprocessed and split datasets (gitignored)
+│   ├── processed/                  # Preprocessed and split datasets (gitignored)
+│   └── generalisation/             # Cross-generator evaluation images (gitignored)
+│       ├── manifest.json           # Download metadata (source, counts, seed)
+│       ├── stylegan/FAKE/          # StyleGAN/StyleGAN2 generated images
+│       ├── sd3_flux/FAKE/          # SD3/Flux modern diffusion images
+│       ├── midjourney_v6/FAKE/     # Midjourney v6 images
+│       ├── gpt4o/FAKE/             # GPT-4o generated images
+│       └── gpt4o_manual/FAKE/      # Manually collected GPT-4o images
 ├── notebooks/
 │   ├── 01_setup_and_eda.ipynb
 │   ├── 02_baseline_training.ipynb
 │   ├── 03_calibration.ipynb
 │   ├── 04_gradcam.ipynb
-│   └── 05_generalisation_eval.ipynb
+│   └── 05_generalisation_eval.ipynb  # Milestone 4: cross-generator evaluation
+├── scripts/
+│   └── download_generalisation_data.py  # Streaming HuggingFace download helper
 ├── src/
-│   ├── __init__.py
 │   ├── model/
-│   │   ├── __init__.py
-│   │   └── detector.py
+│   │   └── detector.py             # EfficientNet-B3 build, checkpoint save/load
 │   ├── evaluation/
-│   │   ├── __init__.py
-│   │   └── metrics.py
+│   │   ├── metrics.py              # Accuracy, AUC, ECE, ROC, reliability diagrams
+│   │   ├── calibration.py          # Temperature scaling (learned via L-BFGS)
+│   │   └── generalisation.py       # Cross-generator evaluation + degradation + plots
 │   ├── explainability/
-│   │   ├── __init__.py
-│   │   └── gradcam.py
+│   │   └── gradcam.py              # Grad-CAM heatmaps + batch failure analysis
 │   └── utils/
-│       ├── __init__.py
-│       └── data_loader.py
+│       └── data_loader.py          # CIFAKE + generalisation data loaders
 ├── outputs/
 │   ├── checkpoints/                # Saved model weights (gitignored)
-│   ├── heatmaps/                   # Grad-CAM output images
-│   ├── plots/                      # Reliability diagrams, ROC curves
-│   └── results/                    # Evaluation CSVs and JSON logs
+│   ├── heatmaps/                   # Grad-CAM output images + failure analysis
+│   ├── plots/                      # All evaluation visualisations
+│   └── results/                    # baseline_results.json, generalisation_results.json
 ├── reports/
 │   ├── literature_review.md
 │   ├── progress_report.md
-│   └── final_report.md
+│   └── progress_report.tex
 ├── tests/
 │   ├── test_metrics.py
-│   └── test_data_loader.py
+│   ├── test_data_loader.py
+│   ├── test_detector.py
+│   ├── test_calibration.py
+│   ├── test_gradcam.py
+│   └── test_generalisation.py      # 20 tests for Milestone 4 evaluation module
 ├── app.py
 ├── requirements.txt
 ├── .gitignore
@@ -103,10 +113,101 @@ ai-image-detection/
 
 | Dataset | Purpose | Source |
 |---|---|---|
-| CIFAKE | Primary training (60K real + AI-generated images) | Kaggle |
-| GenImage | Generalisation eval (DALL-E, Midjourney, Stable Diffusion) | HuggingFace |
-| FaceForensics++ | Supplementary facial manipulation testing | GitHub |
-| GPT-4o / MJ v6 outputs | Newest generation test set | Collected manually |
+| CIFAKE | Primary training (60K real + AI-generated images) | [Kaggle](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images) |
+| ForenSynths / CNNDetection | StyleGAN/StyleGAN2 generalisation eval | [wang-research/CNNDetection](https://huggingface.co/datasets/wang-research/CNNDetection) |
+| GenImage++ | SD3/Flux modern diffusion eval | [Lunahera/genimagepp](https://huggingface.co/datasets/Lunahera/genimagepp) |
+| Midjourney v6 | Proprietary diffusion eval | [CortexLM/midjourney-v6](https://huggingface.co/datasets/CortexLM/midjourney-v6) |
+| GPT-ImgEval | GPT-4o autoregressive eval | [Yejy53/GPT-ImgEval](https://huggingface.co/datasets/Yejy53/GPT-ImgEval) |
+
+---
+
+## Milestone 4: Cross-Generator Generalisation Evaluation
+
+Evaluate the CIFAKE-trained detector on four generator families (StyleGAN, SD3/Flux, Midjourney v6, GPT-4o), measure performance degradation, and analyse failure cases with Grad-CAM.
+
+### Prerequisites
+
+- Trained checkpoint at `outputs/checkpoints/best_detector.pth`
+- Baseline results at `outputs/results/baseline_results.json`
+- CIFAKE real test images at `data/raw/cifake/test/REAL/` (used as the fixed REAL reference for all families)
+
+### Step 1: Download evaluation images
+
+From the project root, download ~300 images per family via streaming (idempotent — skips families that already have enough images):
+
+```bash
+python scripts/download_generalisation_data.py --output-dir data/generalisation --per-generator 300
+```
+
+On Colab with Google Drive persistence:
+
+```bash
+python scripts/download_generalisation_data.py \
+  --output-dir data/generalisation \
+  --per-generator 300 \
+  --base-path /content/drive/MyDrive/ai-image-detection
+```
+
+This creates `data/generalisation/manifest.json` and populates:
+
+| Folder | Source |
+|---|---|
+| `stylegan/FAKE/` | wang-research/CNNDetection (fallback: OwensLab/CommunityForensics) |
+| `sd3_flux/FAKE/` | Lunahera/genimagepp |
+| `midjourney_v6/FAKE/` | CortexLM/midjourney-v6 |
+| `gpt4o/FAKE/` | Yejy53/GPT-ImgEval |
+| `gpt4o_manual/` | README for manually collected GPT-4o images |
+
+If a HuggingFace source is gated or unavailable, the script prints manual download instructions and continues with the remaining families.
+
+### Step 2: Run the evaluation notebook
+
+Open `notebooks/05_generalisation_eval.ipynb` on Colab (T4 GPU recommended) or locally. The notebook:
+
+1. Loads the trained checkpoint and baseline results
+2. Downloads/verifies generalisation data
+3. Evaluates each generator family (accuracy, AUC, ECE, fake detection rate)
+4. Computes degradation vs. CIFAKE baseline (96.96% accuracy)
+5. Generates Grad-CAM failure heatmaps
+6. Saves all plots and JSON results
+
+### Step 3: Run tests
+
+```bash
+pytest tests/test_generalisation.py -v
+```
+
+Or run the full test suite:
+
+```bash
+pytest tests/ -v
+```
+
+### Expected outputs
+
+| Path | Description |
+|---|---|
+| `outputs/results/generalisation_results.json` | Per-family metrics (accuracy, AUC, ECE, F1, confusion matrix) |
+| `outputs/results/degradation_summary.json` | Absolute/relative drop vs. CIFAKE baseline |
+| `outputs/plots/cross_generator_accuracy.png` | Accuracy bar chart with baseline reference line |
+| `outputs/plots/cross_generator_auc.png` | AUC bar chart |
+| `outputs/plots/degradation_waterfall.png` | Performance drop waterfall |
+| `outputs/plots/confidence_distributions_by_generator.png` | P(FAKE) histograms per family |
+| `outputs/plots/ece_comparison_by_generator.png` | ECE pre/post temperature scaling |
+| `outputs/plots/gradcam_comparison_grid.png` | Cross-family failure heatmap grid |
+| `outputs/heatmaps/gradcam_{family}_failures/` | Per-family false negative + low-confidence heatmaps |
+| `outputs/heatmaps/attention_notes.md` | Template for qualitative Grad-CAM observations |
+
+### Key source files
+
+| File | Role |
+|---|---|
+| `scripts/download_generalisation_data.py` | Streaming HuggingFace download, manifest, idempotent |
+| `src/utils/data_loader.py` | `get_generalisation_loader()`, `discover_generator_families()` |
+| `src/evaluation/generalisation.py` | `evaluate_generator()`, `compute_degradation()`, plotting |
+| `src/explainability/gradcam.py` | `batch_gradcam_failures()`, `comparative_grid()` |
+
+Label convention: **0 = FAKE, 1 = REAL** (matches CIFAKE ImageFolder ordering).
 
 ---
 

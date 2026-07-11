@@ -17,3 +17,5 @@ mlflow
 jupyter
 ipywidgets
 pytest
+datasets>=2.14.0
+huggingface_hub>=0.17.0

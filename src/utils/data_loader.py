@@ -1,4 +1,6 @@
 import os
+from pathlib import Path
+
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
 
@@ -77,6 +79,144 @@ def get_cifake_loaders(
     )
 
     return train_loader, val_loader, test_loader
+
+
+def discover_generator_families(root_dir: str) -> list[str]:
+    """Return list of available generator family directory paths.
+
+    Scans root_dir for subdirectories containing a FAKE/ folder.
+    """
+    root = Path(root_dir)
+    families = []
+    if not root.exists():
+        return families
+    for entry in sorted(root.iterdir()):
+        if entry.is_dir() and (entry / "FAKE").is_dir():
+            families.append(str(entry))
+    return families
+
+
+def get_generalisation_loader(
+    family_dir: str,
+    real_reference_dir: str | None = None,
+    batch_size: int = 32,
+    num_workers: int = 2,
+    matched_real: bool = False,
+    seed: int = 42,
+) -> DataLoader:
+    """Load a generalisation test set for a single generator family.
+
+    Labels follow the CIFAKE convention: 0 = FAKE, 1 = REAL.
+
+    Args:
+        family_dir: Path to the family folder (e.g., data/generalisation/stylegan/).
+                    Must contain a FAKE/ subfolder. May contain a REAL/ subfolder.
+        real_reference_dir: Path to a folder of real images (e.g., CIFAKE test/REAL)
+                           used when the family has no matched REAL set.
+        batch_size: Batch size for the DataLoader.
+        num_workers: Number of data loading workers.
+        matched_real: If True and family_dir has a REAL/ folder, use it.
+                      Otherwise use real_reference_dir.
+        seed: Seed for subsampling the real reference set.
+
+    Returns:
+        DataLoader yielding (images, labels) with 0=FAKE, 1=REAL.
+    """
+    family_path = Path(family_dir)
+    fake_dir = family_path / "FAKE"
+    real_dir = family_path / "REAL"
+
+    if not fake_dir.exists():
+        raise FileNotFoundError(f"FAKE directory not found: {fake_dir}")
+
+    eval_transform = get_transforms("test")
+
+    # Determine which real images to use
+    use_matched_real = matched_real and real_dir.exists() and any(real_dir.iterdir())
+    has_real = use_matched_real or (real_reference_dir is not None)
+
+    if has_real:
+        if use_matched_real:
+            # Build a combined dataset with both FAKE/ and REAL/ from the family
+            combined_dataset = datasets.ImageFolder(
+                str(family_path),
+                transform=eval_transform,
+            )
+            # ImageFolder assigns labels alphabetically: FAKE=0, REAL=1
+            loader = DataLoader(
+                combined_dataset,
+                batch_size=batch_size,
+                shuffle=False,
+                num_workers=num_workers,
+                pin_memory=True,
+            )
+        else:
+            # Pair fake images with a balanced subsample of the real reference
+            import torch
+
+            fake_dataset = datasets.ImageFolder(
+                str(fake_dir.parent),
+                transform=eval_transform,
+            )
+            # ImageFolder on parent will pick up FAKE as class 0 (only class if no REAL)
+            # Instead, load fake images directly and assign label 0
+            fake_imgs = _FolderDataset(fake_dir, transform=eval_transform, label=0)
+
+            real_imgs = _FolderDataset(
+                Path(real_reference_dir), transform=eval_transform, label=1
+            )
+            # Subsample real to match fake count
+            n_fake = len(fake_imgs)
+            if len(real_imgs) > n_fake:
+                generator = torch.Generator().manual_seed(seed)
+                indices = torch.randperm(len(real_imgs), generator=generator)[:n_fake].tolist()
+                real_imgs = torch.utils.data.Subset(real_imgs, indices)
+
+            combined = torch.utils.data.ConcatDataset([fake_imgs, real_imgs])
+            loader = DataLoader(
+                combined,
+                batch_size=batch_size,
+                shuffle=False,
+                num_workers=num_workers,
+                pin_memory=True,
+            )
+    else:
+        # Fake-only evaluation
+        fake_imgs = _FolderDataset(fake_dir, transform=eval_transform, label=0)
+        loader = DataLoader(
+            fake_imgs,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=True,
+        )
+
+    return loader
+
+
+class _FolderDataset:
+    """Simple dataset loading all images from a folder with a fixed label."""
+
+    EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
+
+    def __init__(self, folder: Path, transform, label: int):
+        self.folder = folder
+        self.transform = transform
+        self.label = label
+        self.paths = sorted(
+            p for p in folder.iterdir()
+            if p.suffix.lower() in self.EXTENSIONS
+        )
+
+    def __len__(self) -> int:
+        return len(self.paths)
+
+    def __getitem__(self, idx: int):
+        from PIL import Image
+        img = Image.open(self.paths[idx]).convert("RGB")
+        if self.transform:
+            img = self.transform(img)
+        return img, self.label
 
 
 def get_dataset_stats(loader: DataLoader) -> dict:
