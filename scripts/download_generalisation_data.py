@@ -46,16 +46,63 @@ def _count_existing(folder: Path) -> int:
     return sum(1 for f in folder.iterdir() if f.suffix.lower() in exts)
 
 
+def _sample_to_pil(sample: dict) -> Image.Image:
+    """Extract a PIL RGB image from various HuggingFace row formats."""
+    if sample.get("image_data") is not None:
+        raw = sample["image_data"]
+        if isinstance(raw, bytes):
+            return Image.open(BytesIO(raw)).convert("RGB")
+
+    for key in ("Image", "image", "img", "photo"):
+        if sample.get(key) is None:
+            continue
+        val = sample[key]
+        if isinstance(val, Image.Image):
+            return val.convert("RGB")
+        if isinstance(val, bytes):
+            return Image.open(BytesIO(val)).convert("RGB")
+        if isinstance(val, dict) and val.get("bytes"):
+            return Image.open(BytesIO(val["bytes"])).convert("RGB")
+
+    raise KeyError(f"No image field found in sample keys: {list(sample.keys())}")
+
+
+def _stream_reservoir(
+    stream,
+    n: int,
+    seed: int,
+    filter_fn,
+    desc: str,
+    max_scan: int | None = None,
+) -> list[dict]:
+    """Collect up to n*3 matching samples from a streaming dataset, then subsample n."""
+    rng = random.Random(seed)
+    reservoir = []
+    for i, sample in enumerate(tqdm(stream, desc=desc, total=n * 5)):
+        if filter_fn(sample):
+            reservoir.append(sample)
+            if len(reservoir) >= n * 3:
+                break
+        if max_scan is not None and i >= max_scan:
+            break
+    rng.shuffle(reservoir)
+    return reservoir[:n]
+
+
+def _save_samples(samples: list[dict], fake_dir: Path) -> int:
+    """Save a list of HF samples as numbered PNGs."""
+    for idx, sample in enumerate(samples):
+        img = _sample_to_pil(sample)
+        _save_image(img, fake_dir, idx)
+    return _count_existing(fake_dir)
+
+
 def download_stylegan(
     output_dir: Path,
     n: int = 300,
     seed: int = 42,
 ) -> dict:
-    """Download StyleGAN images from ForenSynths / CommunityForensics.
-
-    Primary: OwensLab/CommunityForensics on HuggingFace filtered to GAN family.
-    Fallback: manual instructions printed.
-    """
+    """Download StyleGAN/GAN images from CommunityForensics-Eval."""
     from datasets import load_dataset
 
     family_dir = output_dir / "stylegan"
@@ -67,73 +114,35 @@ def download_stylegan(
         print(f"  [stylegan] Already have {existing} images, skipping.")
         return {"family": "stylegan", "count": existing, "skipped": True}
 
-    print(f"  [stylegan] Downloading {n} images from wang-research/CNNDetection...")
+    print(f"  [stylegan] Downloading {n} GAN images from OwensLab/CommunityForensics-Eval...")
     try:
         ds = load_dataset(
-            "wang-research/CNNDetection",
-            split="test",
+            "OwensLab/CommunityForensics-Eval",
+            split="CompEval",
             streaming=True,
         )
-        rng = random.Random(seed)
 
-        reservoir = []
-        for i, sample in enumerate(tqdm(ds, desc="stylegan", total=n * 5)):
-            label = sample.get("label", None)
-            # CNNDetection: label 1 = fake for progan/stylegan subsets
-            if label == 1:
-                reservoir.append(sample)
-                if len(reservoir) >= n * 3:
-                    break
+        def is_gan_fake(sample):
+            arch = str(sample.get("architecture", "")).upper()
+            label = sample.get("label")
+            return arch == "GAN" and str(label) == "1"
 
-        rng.shuffle(reservoir)
-        selected = reservoir[:n]
-
-        for idx, sample in enumerate(selected):
-            img = sample["image"] if isinstance(sample["image"], Image.Image) else Image.open(BytesIO(sample["image"]))
-            img = img.convert("RGB")
-            _save_image(img, fake_dir, idx)
-
-        count = _count_existing(fake_dir)
+        selected = _stream_reservoir(ds, n, seed, is_gan_fake, "stylegan")
+        count = _save_samples(selected, fake_dir)
         print(f"  [stylegan] Saved {count} images.")
-        return {"family": "stylegan", "count": count, "source": "wang-research/CNNDetection"}
+        return {
+            "family": "stylegan",
+            "count": count,
+            "source": "OwensLab/CommunityForensics-Eval (architecture=GAN)",
+        }
 
     except Exception as e:
-        print(f"  [stylegan] Primary source failed: {e}")
-        print("  [stylegan] Trying fallback: OwensLab/CommunityForensics...")
-        try:
-            ds = load_dataset(
-                "OwensLab/CommunityForensics",
-                split="train",
-                streaming=True,
-            )
-            rng = random.Random(seed)
-            reservoir = []
-            for sample in tqdm(ds, desc="stylegan-fallback", total=n * 5):
-                gen_type = sample.get("generator", "") or sample.get("model", "")
-                if "gan" in str(gen_type).lower() or "stylegan" in str(gen_type).lower():
-                    reservoir.append(sample)
-                    if len(reservoir) >= n * 3:
-                        break
-
-            rng.shuffle(reservoir)
-            selected = reservoir[:n]
-
-            for idx, sample in enumerate(selected):
-                img = sample["image"] if isinstance(sample["image"], Image.Image) else Image.open(BytesIO(sample["image"]))
-                img = img.convert("RGB")
-                _save_image(img, fake_dir, idx)
-
-            count = _count_existing(fake_dir)
-            print(f"  [stylegan] Fallback saved {count} images.")
-            return {"family": "stylegan", "count": count, "source": "OwensLab/CommunityForensics"}
-
-        except Exception as e2:
-            print(f"  [stylegan] Fallback also failed: {e2}")
-            print("  [stylegan] MANUAL DOWNLOAD REQUIRED:")
-            print("    1. Download ForenSynths test set from: https://github.com/peterwang512/CNNDetection")
-            print("    2. Extract StyleGAN/StyleGAN2 fake images")
-            print(f"    3. Place {n}+ images in: {fake_dir}")
-            return {"family": "stylegan", "count": 0, "error": str(e2), "manual_required": True}
+        print(f"  [stylegan] Failed: {e}")
+        print("  [stylegan] MANUAL DOWNLOAD REQUIRED:")
+        print("    1. Download ForenSynths test set from: https://github.com/peterwang512/CNNDetection")
+        print("    2. Extract StyleGAN/StyleGAN2 fake images")
+        print(f"    3. Place {n}+ images in: {fake_dir}")
+        return {"family": "stylegan", "count": 0, "error": str(e), "manual_required": True}
 
 
 def download_sd3_flux(
@@ -141,7 +150,7 @@ def download_sd3_flux(
     n: int = 300,
     seed: int = 42,
 ) -> dict:
-    """Download modern diffusion images (SD3/Flux) from GenImage++."""
+    """Download Stable Diffusion 3 images from Defactify_Image_Dataset."""
     from datasets import load_dataset
 
     family_dir = output_dir / "sd3_flux"
@@ -153,46 +162,63 @@ def download_sd3_flux(
         print(f"  [sd3_flux] Already have {existing} images, skipping.")
         return {"family": "sd3_flux", "count": existing, "skipped": True}
 
-    print(f"  [sd3_flux] Downloading {n} images from Lunahera/genimagepp...")
+    print(f"  [sd3_flux] Downloading {n} SD3 images from Rajarshi-Roy-research/Defactify_Image_Dataset...")
     try:
         ds = load_dataset(
-            "Lunahera/genimagepp",
+            "Rajarshi-Roy-research/Defactify_Image_Dataset",
             split="test",
             streaming=True,
         )
-        rng = random.Random(seed)
-        reservoir = []
 
-        for sample in tqdm(ds, desc="sd3_flux", total=n * 5):
-            label = sample.get("label", None)
-            gen = str(sample.get("generator", "") or sample.get("source", "")).lower()
-            # Look for stable diffusion 3, flux, or any modern diffusion model
-            is_fake = (label == 1) or ("fake" in str(label).lower())
-            is_target = ("sd3" in gen or "flux" in gen or "stable" in gen or
-                        "diffusion" in gen or is_fake)
-            if is_target:
-                reservoir.append(sample)
-                if len(reservoir) >= n * 3:
-                    break
+        def is_sd3_fake(sample):
+            # Label_B: 3 = SD3, Label_A: 1 = AI-generated
+            return sample.get("Label_B") == 3 and sample.get("Label_A") == 1
 
-        rng.shuffle(reservoir)
-        selected = reservoir[:n]
-
-        for idx, sample in enumerate(selected):
-            img = sample["image"] if isinstance(sample["image"], Image.Image) else Image.open(BytesIO(sample["image"]))
-            img = img.convert("RGB")
-            _save_image(img, fake_dir, idx)
-
-        count = _count_existing(fake_dir)
+        selected = _stream_reservoir(ds, n, seed, is_sd3_fake, "sd3_flux", max_scan=50000)
+        count = _save_samples(selected, fake_dir)
         print(f"  [sd3_flux] Saved {count} images.")
-        return {"family": "sd3_flux", "count": count, "source": "Lunahera/genimagepp"}
+        return {
+            "family": "sd3_flux",
+            "count": count,
+            "source": "Rajarshi-Roy-research/Defactify_Image_Dataset (Label_B=SD3)",
+        }
 
     except Exception as e:
         print(f"  [sd3_flux] Failed: {e}")
-        print("  [sd3_flux] MANUAL DOWNLOAD REQUIRED:")
-        print("    1. Visit: https://huggingface.co/datasets/Lunahera/genimagepp")
-        print(f"    2. Download {n}+ test images and place in: {fake_dir}")
-        return {"family": "sd3_flux", "count": 0, "error": str(e), "manual_required": True}
+        print("  [sd3_flux] Trying fallback: OwensLab/CommunityForensics-Eval (LatDiff)...")
+        try:
+            ds = load_dataset(
+                "OwensLab/CommunityForensics-Eval",
+                split="CompEval",
+                streaming=True,
+            )
+
+            def is_modern_diffusion(sample):
+                model = str(sample.get("model_name", "")).lower()
+                arch = str(sample.get("architecture", "")).upper()
+                label = str(sample.get("label", ""))
+                is_fake = label == "1"
+                is_modern = (
+                    "flux" in model or "sd3" in model or "stable-diffusion-3" in model
+                    or (arch == "LATDIFF" and "stable" in model)
+                )
+                return is_fake and is_modern
+
+            selected = _stream_reservoir(ds, n, seed, is_modern_diffusion, "sd3_flux-fallback")
+            count = _save_samples(selected, fake_dir)
+            print(f"  [sd3_flux] Fallback saved {count} images.")
+            return {
+                "family": "sd3_flux",
+                "count": count,
+                "source": "OwensLab/CommunityForensics-Eval (modern LatDiff)",
+            }
+
+        except Exception as e2:
+            print(f"  [sd3_flux] Fallback failed: {e2}")
+            print("  [sd3_flux] MANUAL DOWNLOAD REQUIRED:")
+            print("    1. Visit: https://huggingface.co/datasets/Rajarshi-Roy-research/Defactify_Image_Dataset")
+            print(f"    2. Download {n}+ SD3 images and place in: {fake_dir}")
+            return {"family": "sd3_flux", "count": 0, "error": str(e2), "manual_required": True}
 
 
 def download_midjourney_v6(
@@ -200,7 +226,7 @@ def download_midjourney_v6(
     n: int = 300,
     seed: int = 42,
 ) -> dict:
-    """Download Midjourney v6 images from CortexLM/midjourney-v6."""
+    """Download Midjourney v6 images from Defactify or ehristoforu/midjourney-images."""
     from datasets import load_dataset
 
     family_dir = output_dir / "midjourney_v6"
@@ -212,65 +238,49 @@ def download_midjourney_v6(
         print(f"  [midjourney_v6] Already have {existing} images, skipping.")
         return {"family": "midjourney_v6", "count": existing, "skipped": True}
 
-    print(f"  [midjourney_v6] Downloading {n} images from CortexLM/midjourney-v6...")
+    print(f"  [midjourney_v6] Downloading {n} images from Rajarshi-Roy-research/Defactify_Image_Dataset...")
     try:
         ds = load_dataset(
-            "CortexLM/midjourney-v6",
-            split="train",
+            "Rajarshi-Roy-research/Defactify_Image_Dataset",
+            split="test",
             streaming=True,
         )
-        rng = random.Random(seed)
-        reservoir = []
 
-        for sample in tqdm(ds, desc="midjourney_v6", total=n * 3):
-            reservoir.append(sample)
-            if len(reservoir) >= n * 3:
-                break
+        def is_mj_fake(sample):
+            # Label_B: 5 = Midjourney v6
+            return sample.get("Label_B") == 5 and sample.get("Label_A") == 1
 
-        rng.shuffle(reservoir)
-        selected = reservoir[:n]
-
-        for idx, sample in enumerate(selected):
-            img = sample["image"] if isinstance(sample["image"], Image.Image) else Image.open(BytesIO(sample["image"]))
-            img = img.convert("RGB")
-            _save_image(img, fake_dir, idx)
-
-        count = _count_existing(fake_dir)
+        selected = _stream_reservoir(ds, n, seed, is_mj_fake, "midjourney_v6", max_scan=50000)
+        count = _save_samples(selected, fake_dir)
         print(f"  [midjourney_v6] Saved {count} images.")
-        return {"family": "midjourney_v6", "count": count, "source": "CortexLM/midjourney-v6"}
+        return {
+            "family": "midjourney_v6",
+            "count": count,
+            "source": "Rajarshi-Roy-research/Defactify_Image_Dataset (Label_B=Midjourney)",
+        }
 
     except Exception as e:
-        print(f"  [midjourney_v6] Failed: {e}")
-        print("  [midjourney_v6] Trying fallback: terminusresearch/midjourney-v6-520k-raw...")
+        print(f"  [midjourney_v6] Primary failed: {e}")
+        print("  [midjourney_v6] Trying fallback: ehristoforu/midjourney-images...")
         try:
             ds = load_dataset(
-                "terminusresearch/midjourney-v6-520k-raw",
+                "ehristoforu/midjourney-images",
                 split="train",
                 streaming=True,
             )
-            rng = random.Random(seed)
-            reservoir = []
-            for sample in tqdm(ds, desc="midjourney_v6-fallback", total=n * 3):
-                reservoir.append(sample)
-                if len(reservoir) >= n * 3:
-                    break
-
-            rng.shuffle(reservoir)
-            selected = reservoir[:n]
-
-            for idx, sample in enumerate(selected):
-                img = sample["image"] if isinstance(sample["image"], Image.Image) else Image.open(BytesIO(sample["image"]))
-                img = img.convert("RGB")
-                _save_image(img, fake_dir, idx)
-
-            count = _count_existing(fake_dir)
+            selected = _stream_reservoir(ds, n, seed, lambda _: True, "midjourney_v6-fallback")
+            count = _save_samples(selected, fake_dir)
             print(f"  [midjourney_v6] Fallback saved {count} images.")
-            return {"family": "midjourney_v6", "count": count, "source": "terminusresearch/midjourney-v6-520k-raw"}
+            return {
+                "family": "midjourney_v6",
+                "count": count,
+                "source": "ehristoforu/midjourney-images",
+            }
 
         except Exception as e2:
             print(f"  [midjourney_v6] Fallback failed: {e2}")
             print("  [midjourney_v6] MANUAL DOWNLOAD REQUIRED:")
-            print("    1. Visit: https://huggingface.co/datasets/CortexLM/midjourney-v6")
+            print("    1. Visit: https://huggingface.co/datasets/ehristoforu/midjourney-images")
             print(f"    2. Download {n}+ images and place in: {fake_dir}")
             return {"family": "midjourney_v6", "count": 0, "error": str(e2), "manual_required": True}
 
@@ -299,23 +309,8 @@ def download_gpt4o(
             split="train",
             streaming=True,
         )
-        rng = random.Random(seed)
-        reservoir = []
-
-        for sample in tqdm(ds, desc="gpt4o", total=n * 3):
-            reservoir.append(sample)
-            if len(reservoir) >= n * 3:
-                break
-
-        rng.shuffle(reservoir)
-        selected = reservoir[:n]
-
-        for idx, sample in enumerate(selected):
-            img = sample["image"] if isinstance(sample["image"], Image.Image) else Image.open(BytesIO(sample["image"]))
-            img = img.convert("RGB")
-            _save_image(img, fake_dir, idx)
-
-        count = _count_existing(fake_dir)
+        selected = _stream_reservoir(ds, n, seed, lambda _: True, "gpt4o")
+        count = _save_samples(selected, fake_dir)
         print(f"  [gpt4o] Saved {count} images.")
         return {"family": "gpt4o", "count": count, "source": "Yejy53/GPT-ImgEval"}
 
@@ -328,22 +323,8 @@ def download_gpt4o(
                 split="train",
                 streaming=True,
             )
-            rng = random.Random(seed)
-            reservoir = []
-            for sample in tqdm(ds, desc="gpt4o-fallback", total=n * 3):
-                reservoir.append(sample)
-                if len(reservoir) >= n * 3:
-                    break
-
-            rng.shuffle(reservoir)
-            selected = reservoir[:n]
-
-            for idx, sample in enumerate(selected):
-                img = sample["image"] if isinstance(sample["image"], Image.Image) else Image.open(BytesIO(sample["image"]))
-                img = img.convert("RGB")
-                _save_image(img, fake_dir, idx)
-
-            count = _count_existing(fake_dir)
+            selected = _stream_reservoir(ds, n, seed, lambda _: True, "gpt4o-fallback")
+            count = _save_samples(selected, fake_dir)
             print(f"  [gpt4o] Fallback saved {count} images.")
             return {"family": "gpt4o", "count": count, "source": "Yejy53/Echo-4o-Image"}
 

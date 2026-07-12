@@ -114,9 +114,9 @@ ai-image-detection/
 | Dataset | Purpose | Source |
 |---|---|---|
 | CIFAKE | Primary training (60K real + AI-generated images) | [Kaggle](https://www.kaggle.com/datasets/birdy654/cifake-real-and-ai-generated-synthetic-images) |
-| ForenSynths / CNNDetection | StyleGAN/StyleGAN2 generalisation eval | [wang-research/CNNDetection](https://huggingface.co/datasets/wang-research/CNNDetection) |
-| GenImage++ | SD3/Flux modern diffusion eval | [Lunahera/genimagepp](https://huggingface.co/datasets/Lunahera/genimagepp) |
-| Midjourney v6 | Proprietary diffusion eval | [CortexLM/midjourney-v6](https://huggingface.co/datasets/CortexLM/midjourney-v6) |
+| ForenSynths / CNNDetection | StyleGAN/StyleGAN2 generalisation eval | [OwensLab/CommunityForensics-Eval](https://huggingface.co/datasets/OwensLab/CommunityForensics-Eval) (architecture=GAN) |
+| Defactify Image Dataset | SD3 modern diffusion eval | [Rajarshi-Roy-research/Defactify_Image_Dataset](https://huggingface.co/datasets/Rajarshi-Roy-research/Defactify_Image_Dataset) (Label_B=SD3) |
+| Defactify / Midjourney Images | Midjourney v6 eval | [Defactify](https://huggingface.co/datasets/Rajarshi-Roy-research/Defactify_Image_Dataset) or [ehristoforu/midjourney-images](https://huggingface.co/datasets/ehristoforu/midjourney-images) |
 | GPT-ImgEval | GPT-4o autoregressive eval | [Yejy53/GPT-ImgEval](https://huggingface.co/datasets/Yejy53/GPT-ImgEval) |
 
 ---
@@ -152,9 +152,9 @@ This creates `data/generalisation/manifest.json` and populates:
 
 | Folder | Source |
 |---|---|
-| `stylegan/FAKE/` | wang-research/CNNDetection (fallback: OwensLab/CommunityForensics) |
-| `sd3_flux/FAKE/` | Lunahera/genimagepp |
-| `midjourney_v6/FAKE/` | CortexLM/midjourney-v6 |
+| `stylegan/FAKE/` | OwensLab/CommunityForensics-Eval (architecture=GAN) |
+| `sd3_flux/FAKE/` | Rajarshi-Roy-research/Defactify_Image_Dataset (Label_B=SD3) |
+| `midjourney_v6/FAKE/` | Defactify (Label_B=Midjourney) or ehristoforu/midjourney-images |
 | `gpt4o/FAKE/` | Yejy53/GPT-ImgEval |
 | `gpt4o_manual/` | README for manually collected GPT-4o images |
 
