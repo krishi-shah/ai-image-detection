@@ -122,6 +122,12 @@ class TestDiscoverFamilies:
         names = [Path(f).name for f in families]
         assert "not_a_family" not in names
 
+    def test_excludes_empty_fake_folders(self, tmp_path):
+        empty = tmp_path / "empty_family"
+        (empty / "FAKE").mkdir(parents=True)
+        families = discover_generator_families(str(tmp_path))
+        assert "empty_family" not in [Path(f).name for f in families]
+
     def test_empty_dir(self, tmp_path):
         families = discover_generator_families(str(tmp_path / "nonexistent"))
         assert families == []

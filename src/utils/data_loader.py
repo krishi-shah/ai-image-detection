@@ -81,17 +81,23 @@ def get_cifake_loaders(
     return train_loader, val_loader, test_loader
 
 
-def discover_generator_families(root_dir: str) -> list[str]:
+def discover_generator_families(root_dir: str, min_fake: int = 1) -> list[str]:
     """Return list of available generator family directory paths.
 
-    Scans root_dir for subdirectories containing a FAKE/ folder.
+    Scans root_dir for subdirectories containing a FAKE/ folder with at
+    least min_fake image files (skips empty placeholders like gpt4o_manual).
     """
     root = Path(root_dir)
     families = []
     if not root.exists():
         return families
+    exts = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
     for entry in sorted(root.iterdir()):
-        if entry.is_dir() and (entry / "FAKE").is_dir():
+        fake_dir = entry / "FAKE"
+        if not entry.is_dir() or not fake_dir.is_dir():
+            continue
+        n_fake = sum(1 for f in fake_dir.iterdir() if f.suffix.lower() in exts)
+        if n_fake >= min_fake:
             families.append(str(entry))
     return families
 
