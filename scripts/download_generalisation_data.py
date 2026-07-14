@@ -7,6 +7,8 @@ skips families whose folder already contains >= N images.
 Usage (CLI):
     python scripts/download_generalisation_data.py --output-dir data/generalisation --per-generator 300
 
+Families: StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, GPT Image 2 (OpenFake).
+
 Usage (from notebook):
     from scripts.download_generalisation_data import download_all_families
     download_all_families(output_dir="data/generalisation", per_generator=300)
@@ -87,6 +89,19 @@ def _stream_reservoir(
             break
     rng.shuffle(reservoir)
     return reservoir[:n]
+
+
+def _stream_collect_all(
+    stream,
+    filter_fn,
+    desc: str,
+) -> list[dict]:
+    """Scan an entire streaming dataset and collect all rows matching filter_fn."""
+    collected = []
+    for sample in tqdm(stream, desc=desc):
+        if filter_fn(sample):
+            collected.append(sample)
+    return collected
 
 
 def _save_samples(samples: list[dict], fake_dir: Path) -> int:
@@ -336,6 +351,91 @@ def download_gpt4o(
             return {"family": "gpt4o", "count": 0, "error": str(e2), "manual_required": True}
 
 
+def download_gpt_image_2(
+    output_dir: Path,
+    n: int = 300,
+    seed: int = 42,
+    min_available: int = 200,
+) -> dict:
+    """Download GPT-image-2.0 fakes from ComplexDataLab/OpenFake core/test."""
+    from datasets import load_dataset
+
+    family_dir = output_dir / "gpt_image_2"
+    fake_dir = family_dir / "FAKE"
+    fake_dir.mkdir(parents=True, exist_ok=True)
+
+    existing = _count_existing(fake_dir)
+    if existing >= n:
+        print(f"  [gpt_image_2] Already have {existing} images, skipping.")
+        return {"family": "gpt_image_2", "count": existing, "skipped": True}
+
+    print(
+        f"  [gpt_image_2] Downloading up to {n} images from "
+        "ComplexDataLab/OpenFake (core/test, model=gpt-image-2.0)..."
+    )
+    try:
+        ds = load_dataset(
+            "ComplexDataLab/OpenFake",
+            "core",
+            split="test",
+            streaming=True,
+        )
+
+        def is_gpt_image_2_fake(sample):
+            return (
+                sample.get("label") == "fake"
+                and sample.get("model") == "gpt-image-2.0"
+            )
+
+        reservoir = _stream_collect_all(ds, is_gpt_image_2_fake, "gpt_image_2-scan")
+        available = len(reservoir)
+        print(f"  [gpt_image_2] Found {available} matching images in core/test.")
+
+        if available < min_available:
+            print(
+                f"  [gpt_image_2] Only {available} images available "
+                f"(minimum {min_available}). Manual collection may be required."
+            )
+            return {
+                "family": "gpt_image_2",
+                "count": 0,
+                "available_count": available,
+                "target_n": n,
+                "error": f"insufficient_images ({available} < {min_available})",
+                "manual_required": True,
+            }
+
+        take = min(n, available)
+        if take < n:
+            print(
+                f"  [gpt_image_2] Warning: only {available} available; "
+                f"downloading {take} (target was {n})."
+            )
+
+        rng = random.Random(seed)
+        rng.shuffle(reservoir)
+        selected = reservoir[:take]
+        count = _save_samples(selected, fake_dir)
+        print(f"  [gpt_image_2] Saved {count} images.")
+        return {
+            "family": "gpt_image_2",
+            "count": count,
+            "available_count": available,
+            "target_n": n,
+            "partial": count < n,
+            "source": "ComplexDataLab/OpenFake (core/test, model=gpt-image-2.0)",
+        }
+
+    except Exception as e:
+        print(f"  [gpt_image_2] Failed: {e}")
+        print("  [gpt_image_2] MANUAL DOWNLOAD REQUIRED:")
+        print("    1. Accept OpenFake terms: https://huggingface.co/datasets/ComplexDataLab/OpenFake")
+        print("    2. Log in: huggingface-cli login")
+        print("    3. Filter core/test for label=fake, model=gpt-image-2.0")
+        print(f"    4. Place images in: {fake_dir}")
+        return {"family": "gpt_image_2", "count": 0, "error": str(e), "manual_required": True}
+
+
 # ---------------------------------------------------------------------------
 # Manual GPT-4o folder setup
 # ---------------------------------------------------------------------------
@@ -418,6 +518,7 @@ def download_all_families(
         ("SD3/Flux", download_sd3_flux),
         ("Midjourney v6", download_midjourney_v6),
         ("GPT-4o", download_gpt4o),
+        ("GPT Image 2", download_gpt_image_2),
     ]
 
     for name, fn in families:
@@ -434,12 +535,18 @@ def download_all_families(
     print("DOWNLOAD SUMMARY")
     print("=" * 50)
     for r in results:
-        status = "OK" if r.get("count", 0) >= per_generator else "INCOMPLETE"
+        count = r.get("count", 0)
         if r.get("manual_required"):
             status = "MANUAL REQUIRED"
         elif r.get("skipped"):
             status = "SKIPPED (already present)"
-        print(f"  {r['family']:15s} | {r.get('count', 0):4d} images | {status}")
+        elif r.get("partial"):
+            status = f"OK ({count}/{r.get('target_n', per_generator)} — all available)"
+        elif count >= per_generator:
+            status = "OK"
+        else:
+            status = "INCOMPLETE"
+        print(f"  {r['family']:15s} | {count:4d} images | {status}")
 
     return {"output_dir": str(out), "results": results}
 

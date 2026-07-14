@@ -24,7 +24,7 @@ This project investigates the generalisation gap in AI-generated image detection
 - Integrate Grad-CAM for visual explainability of model decisions
 
 **Phase 2 (July 6 onward): Generalisation Evaluation**
-- Evaluate the trained detector across image sets from StyleGAN, Stable Diffusion, Midjourney v6, and GPT-4o
+- Evaluate the trained detector across image sets from StyleGAN, Stable Diffusion, Midjourney v6, GPT-4o, and GPT Image 2
 - Perform failure case analysis — identify which generative model families fool the detector most and why
 - Produce a final written report with findings
 
@@ -43,6 +43,7 @@ ai-image-detection/
 │       ├── sd3_flux/FAKE/          # SD3/Flux modern diffusion images
 │       ├── midjourney_v6/FAKE/     # Midjourney v6 images
 │       ├── gpt4o/FAKE/             # GPT-4o generated images
+│       ├── gpt_image_2/FAKE/       # GPT Image 2.0 images (OpenFake OOD test)
 │       └── gpt4o_manual/FAKE/      # Manually collected GPT-4o images
 ├── notebooks/
 │   ├── 01_setup_and_eda.ipynb
@@ -118,22 +119,24 @@ ai-image-detection/
 | Defactify Image Dataset | SD3 modern diffusion eval | [Rajarshi-Roy-research/Defactify_Image_Dataset](https://huggingface.co/datasets/Rajarshi-Roy-research/Defactify_Image_Dataset) (Label_B=SD3) |
 | Defactify / Midjourney Images | Midjourney v6 eval | [Defactify](https://huggingface.co/datasets/Rajarshi-Roy-research/Defactify_Image_Dataset) or [ehristoforu/midjourney-images](https://huggingface.co/datasets/ehristoforu/midjourney-images) |
 | GPT-ImgEval | GPT-4o autoregressive eval | [Yejy53/GPT-ImgEval](https://huggingface.co/datasets/Yejy53/GPT-ImgEval) |
+| OpenFake | GPT Image 2.0 autoregressive successor eval | [ComplexDataLab/OpenFake](https://huggingface.co/datasets/ComplexDataLab/OpenFake) (`core/test`, `model=gpt-image-2.0`) |
 
 ---
 
 ## Milestone 4: Cross-Generator Generalisation Evaluation
 
-Evaluate the CIFAKE-trained detector on four generator families (StyleGAN, SD3/Flux, Midjourney v6, GPT-4o), measure performance degradation, and analyse failure cases with Grad-CAM.
+Evaluate the CIFAKE-trained detector on five generator families (StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, GPT Image 2), measure performance degradation, and analyse failure cases with Grad-CAM.
 
 ### Prerequisites
 
 - Trained checkpoint at `outputs/checkpoints/best_detector.pth`
 - Baseline results at `outputs/results/baseline_results.json`
 - CIFAKE real test images at `data/raw/cifake/test/REAL/` (used as the fixed REAL reference for all families)
+- HuggingFace login (`huggingface-cli login`) and acceptance of [OpenFake](https://huggingface.co/datasets/ComplexDataLab/OpenFake) dataset terms (required for GPT Image 2 download)
 
 ### Step 1: Download evaluation images
 
-From the project root, download ~300 images per family via streaming (idempotent — skips families that already have enough images):
+From the project root, download ~300 images per family via streaming (idempotent — skips families that already have enough images). GPT Image 2 may have 200–600 images available in OpenFake; the script downloads `min(300, available)` and the eval loader subsamples REAL images to match.
 
 ```bash
 python scripts/download_generalisation_data.py --output-dir data/generalisation --per-generator 300
@@ -156,6 +159,7 @@ This creates `data/generalisation/manifest.json` and populates:
 | `sd3_flux/FAKE/` | Rajarshi-Roy-research/Defactify_Image_Dataset (Label_B=SD3) |
 | `midjourney_v6/FAKE/` | Defactify (Label_B=Midjourney) or ehristoforu/midjourney-images |
 | `gpt4o/FAKE/` | Yejy53/GPT-ImgEval |
+| `gpt_image_2/FAKE/` | ComplexDataLab/OpenFake (`core/test`, `model=gpt-image-2.0`) |
 | `gpt4o_manual/` | README for manually collected GPT-4o images |
 
 If a HuggingFace source is gated or unavailable, the script prints manual download instructions and continues with the remaining families.
