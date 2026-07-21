@@ -7,7 +7,7 @@ skips families whose folder already contains >= N images.
 Usage (CLI):
     python scripts/download_generalisation_data.py --output-dir data/generalisation --per-generator 300
 
-Families: StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, GPT Image 2 (OpenFake).
+Families: StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, Janus-Pro.
 
 Usage (from notebook):
     from scripts.download_generalisation_data import download_all_families
@@ -89,19 +89,6 @@ def _stream_reservoir(
             break
     rng.shuffle(reservoir)
     return reservoir[:n]
-
-
-def _stream_collect_all(
-    stream,
-    filter_fn,
-    desc: str,
-) -> list[dict]:
-    """Scan an entire streaming dataset and collect all rows matching filter_fn."""
-    collected = []
-    for sample in tqdm(stream, desc=desc):
-        if filter_fn(sample):
-            collected.append(sample)
-    return collected
 
 
 def _save_samples(samples: list[dict], fake_dir: Path) -> int:
@@ -351,89 +338,65 @@ def download_gpt4o(
             return {"family": "gpt4o", "count": 0, "error": str(e2), "manual_required": True}
 
 
-def download_gpt_image_2(
+def download_janus_pro(
     output_dir: Path,
     n: int = 300,
     seed: int = 42,
-    min_available: int = 200,
+    variant: str = "Janus-Pro-7B",
 ) -> dict:
-    """Download GPT-image-2.0 fakes from ComplexDataLab/OpenFake core/test."""
+    """Download Janus-Pro (autoregressive) fakes from midbee/Janus-Pro-R1-Data.
+
+    Janus-Pro (DeepSeek, Jan 2025) is an autoregressive text-to-image model — the
+    same architecture family as GPT-4o, the one generator that degraded in this
+    eval. The dataset is ungated and stores ~16 images per prompt with a `source`
+    field ("Janus-Pro-7B", "Janus-Pro-1B", "Flux"); Janus-Pro images are common
+    (roughly half of every prompt's images), so a bounded scan collects n quickly
+    without the full-dataset scan that hangs on gated/rare-row sources.
+    """
     from datasets import load_dataset
 
-    family_dir = output_dir / "gpt_image_2"
+    family_dir = output_dir / "janus_pro"
     fake_dir = family_dir / "FAKE"
     fake_dir.mkdir(parents=True, exist_ok=True)
 
     existing = _count_existing(fake_dir)
     if existing >= n:
-        print(f"  [gpt_image_2] Already have {existing} images, skipping.")
-        return {"family": "gpt_image_2", "count": existing, "skipped": True}
+        print(f"  [janus_pro] Already have {existing} images, skipping.")
+        return {"family": "janus_pro", "count": existing, "skipped": True}
 
-    print(
-        f"  [gpt_image_2] Downloading up to {n} images from "
-        "ComplexDataLab/OpenFake (core/test, model=gpt-image-2.0)..."
-    )
+    print(f"  [janus_pro] Downloading {n} {variant} images from midbee/Janus-Pro-R1-Data...")
     try:
-        ds = load_dataset(
-            "ComplexDataLab/OpenFake",
-            "core",
-            split="test",
-            streaming=True,
-        )
+        ds = load_dataset("midbee/Janus-Pro-R1-Data", split="train", streaming=True)
 
-        def is_gpt_image_2_fake(sample):
-            return (
-                sample.get("label") == "fake"
-                and sample.get("model") == "gpt-image-2.0"
-            )
+        # Each row is one prompt with a nested list of images; keep the ones
+        # whose source matches the requested Janus-Pro variant. Bounded by
+        # max_scan prompts so it can never hang.
+        max_scan = 3000
+        samples = []
+        for i, row in enumerate(tqdm(ds, desc="janus_pro", total=n)):
+            for item in row.get("data", []):
+                if str(item.get("source")) == variant:
+                    samples.append({"image": item.get("img")})
+                    if len(samples) >= n:
+                        break
+            if len(samples) >= n or i >= max_scan:
+                break
 
-        reservoir = _stream_collect_all(ds, is_gpt_image_2_fake, "gpt_image_2-scan")
-        available = len(reservoir)
-        print(f"  [gpt_image_2] Found {available} matching images in core/test.")
-
-        if available < min_available:
-            print(
-                f"  [gpt_image_2] Only {available} images available "
-                f"(minimum {min_available}). Manual collection may be required."
-            )
-            return {
-                "family": "gpt_image_2",
-                "count": 0,
-                "available_count": available,
-                "target_n": n,
-                "error": f"insufficient_images ({available} < {min_available})",
-                "manual_required": True,
-            }
-
-        take = min(n, available)
-        if take < n:
-            print(
-                f"  [gpt_image_2] Warning: only {available} available; "
-                f"downloading {take} (target was {n})."
-            )
-
-        rng = random.Random(seed)
-        rng.shuffle(reservoir)
-        selected = reservoir[:take]
-        count = _save_samples(selected, fake_dir)
-        print(f"  [gpt_image_2] Saved {count} images.")
+        count = _save_samples(samples, fake_dir)
+        print(f"  [janus_pro] Saved {count} images.")
         return {
-            "family": "gpt_image_2",
+            "family": "janus_pro",
             "count": count,
-            "available_count": available,
-            "target_n": n,
             "partial": count < n,
-            "source": "ComplexDataLab/OpenFake (core/test, model=gpt-image-2.0)",
+            "source": f"midbee/Janus-Pro-R1-Data (source={variant})",
         }
 
     except Exception as e:
-        print(f"  [gpt_image_2] Failed: {e}")
-        print("  [gpt_image_2] MANUAL DOWNLOAD REQUIRED:")
-        print("    1. Accept OpenFake terms: https://huggingface.co/datasets/ComplexDataLab/OpenFake")
-        print("    2. Log in: huggingface-cli login")
-        print("    3. Filter core/test for label=fake, model=gpt-image-2.0")
-        print(f"    4. Place images in: {fake_dir}")
-        return {"family": "gpt_image_2", "count": 0, "error": str(e), "manual_required": True}
+        print(f"  [janus_pro] Failed: {e}")
+        print("  [janus_pro] MANUAL DOWNLOAD REQUIRED:")
+        print("    1. Visit: https://huggingface.co/datasets/midbee/Janus-Pro-R1-Data")
+        print(f"    2. Keep data[].source == '{variant}' and place {n} images in: {fake_dir}")
+        return {"family": "janus_pro", "count": 0, "error": str(e), "manual_required": True}
 
 
 # ---------------------------------------------------------------------------
@@ -518,7 +481,7 @@ def download_all_families(
         ("SD3/Flux", download_sd3_flux),
         ("Midjourney v6", download_midjourney_v6),
         ("GPT-4o", download_gpt4o),
-        ("GPT Image 2", download_gpt_image_2),
+        ("Janus-Pro", download_janus_pro),
     ]
 
     for name, fn in families:
