@@ -1,7 +1,7 @@
 \documentclass[12pt,a4paper]{article}
 
 % NOTE FOR OVERLEAF: If the .tex file is placed at project root (not inside reports/),
-% change all "../outputs/" paths to "outputs/" using find-and-replace.
+% change all "outputs/" paths to "outputs/" using find-and-replace.
 % Also: heatmap filenames contain spaces and parentheses. If grffile doesn't help,
 % rename the uploaded files to remove spaces (e.g., FAKE_48_5.jpg).
 
@@ -60,7 +60,7 @@
 \textbf{Author:}      & Krishi Rajeshkumar Shah (220968905) \\
 \textbf{Supervisor:}   & Mona Nasery \\
 \textbf{Course:}       & EECS 4080 --- Computer Science Project \\
-\textbf{Date:}         & June 2026 \\
+\textbf{Date:}         & July 2026 \\
 \end{tabular}
 
 \vfill
@@ -299,7 +299,7 @@ Macro avg      & 0.9701 & 0.9696 & 0.9696 & 20,000 \\
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.7\textwidth]{../outputs/plots/confusion_matrix.png}
+\includegraphics[width=0.7\textwidth]{outputs/plots/confusion_matrix.png}
 \caption{Confusion matrix on CIFAKE test set (20,000 images).}
 \label{fig:confusion}
 \end{figure}
@@ -310,7 +310,7 @@ The ROC curve (Figure~\ref{fig:roc}) shows near-perfect discrimination with AUC-
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.7\textwidth]{../outputs/plots/roc_curve.png}
+\includegraphics[width=0.7\textwidth]{outputs/plots/roc_curve.png}
 \caption{ROC curve (AUC = 0.9971).}
 \label{fig:roc}
 \end{figure}
@@ -354,7 +354,7 @@ Actual REAL & 0.0244 & 0.0000 \\
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.75\textwidth]{../outputs/plots/probability_histograms.png}
+\includegraphics[width=0.75\textwidth]{outputs/plots/probability_histograms.png}
 \caption{Predicted probability distributions for FAKE and REAL images.}
 \label{fig:probhist}
 \end{figure}
@@ -390,7 +390,7 @@ For applications that prioritise catching every AI image (e.g., content moderati
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.75\textwidth]{../outputs/plots/threshold_all_metrics.png}
+\includegraphics[width=0.75\textwidth]{outputs/plots/threshold_all_metrics.png}
 \caption{Threshold sensitivity --- all metrics.}
 \label{fig:threshold_all}
 \end{figure}
@@ -398,12 +398,12 @@ For applications that prioritise catching every AI image (e.g., content moderati
 \begin{figure}[H]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/plots/threshold_accuracy.png}
+    \includegraphics[width=\textwidth]{outputs/plots/threshold_accuracy.png}
     \caption{Accuracy vs.\ threshold.}
 \end{subfigure}
 \hfill
 \begin{subfigure}[b]{0.48\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/plots/threshold_precision_recall.png}
+    \includegraphics[width=\textwidth]{outputs/plots/threshold_precision_recall.png}
     \caption{Precision/recall vs.\ threshold.}
 \end{subfigure}
 \caption{Threshold sensitivity breakdown.}
@@ -433,12 +433,12 @@ The model was already very well-calibrated before temperature scaling (test ECE 
 \begin{figure}[H]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/plots/reliability_pre_calibration.png}
+    \includegraphics[width=\textwidth]{outputs/plots/reliability_pre_calibration.png}
     \caption{Before calibration (ECE = 0.0026).}
 \end{subfigure}
 \hfill
 \begin{subfigure}[b]{0.48\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/plots/reliability_post_calibration.png}
+    \includegraphics[width=\textwidth]{outputs/plots/reliability_post_calibration.png}
     \caption{After calibration (ECE = 0.0113).}
 \end{subfigure}
 \caption{Reliability diagrams before and after temperature scaling.}
@@ -447,7 +447,7 @@ The model was already very well-calibrated before temperature scaling (test ECE 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.75\textwidth]{../outputs/plots/calibration_comparison.png}
+\includegraphics[width=0.75\textwidth]{outputs/plots/calibration_comparison.png}
 \caption{Calibration comparison (before vs.\ after temperature scaling).}
 \label{fig:calibration_comparison}
 \end{figure}
@@ -472,7 +472,7 @@ This finding is consistent with Gragnaniello et al.\ (2021), who showed that som
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.85\textwidth]{../outputs/plots/misclassified_fakes.png}
+\includegraphics[width=0.85\textwidth]{outputs/plots/misclassified_fakes.png}
 \caption{Most confidently misclassified FAKE images (predicted as REAL).}
 \label{fig:misclassified}
 \end{figure}
@@ -491,7 +491,7 @@ This indicates the model primarily relies on \textbf{low-level texture artefacts
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\textwidth]{../outputs/plots/gradcam_comparison.png}
+\includegraphics[width=0.95\textwidth]{outputs/plots/gradcam_comparison.png}
 \caption{Grad-CAM comparison --- FAKE vs.\ REAL images.}
 \label{fig:gradcam_comparison}
 \end{figure}
@@ -499,12 +499,12 @@ This indicates the model primarily relies on \textbf{low-level texture artefacts
 \begin{figure}[H]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/plots/gradcam_fake.png}
+    \includegraphics[width=\textwidth]{outputs/plots/gradcam_fake.png}
     \caption{Grad-CAM on FAKE images.}
 \end{subfigure}
 \hfill
 \begin{subfigure}[b]{0.48\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/plots/gradcam_real.png}
+    \includegraphics[width=\textwidth]{outputs/plots/gradcam_real.png}
     \caption{Grad-CAM on REAL images.}
 \end{subfigure}
 \caption{Grad-CAM heatmaps by class.}
@@ -518,29 +518,29 @@ Figures~\ref{fig:heatmaps_fake} and~\ref{fig:heatmaps_real} show individual Grad
 \begin{figure}[H]
 \centering
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/FAKE_48 (5).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_48 (5).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/FAKE_516.jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_516.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/FAKE_518 (3).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_518 (3).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/FAKE_52 (10).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_52 (10).jpg}
 \end{subfigure}
 
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/FAKE_636 (3).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_636 (3).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/FAKE_755 (2).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_755 (2).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/FAKE_870 (8).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_870 (8).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/FAKE_95 (8).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_95 (8).jpg}
 \end{subfigure}
 \caption{Individual Grad-CAM heatmaps for FAKE images --- localised attention on generation artefacts.}
 \label{fig:heatmaps_fake}
@@ -549,29 +549,29 @@ Figures~\ref{fig:heatmaps_fake} and~\ref{fig:heatmaps_real} show individual Grad
 \begin{figure}[H]
 \centering
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/REAL_0066 (7).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0066 (7).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/REAL_0090 (7).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0090 (7).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/REAL_0124 (10).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0124 (10).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/REAL_0233 (9).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0233 (9).jpg}
 \end{subfigure}
 
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/REAL_0389 (6).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0389 (6).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/REAL_0504 (5).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0504 (5).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/REAL_0934 (8).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0934 (8).jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{../outputs/heatmaps/REAL_0998 (9).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0998 (9).jpg}
 \end{subfigure}
 \caption{Individual Grad-CAM heatmaps for REAL images --- diffuse attention across natural textures.}
 \label{fig:heatmaps_real}
@@ -580,6 +580,179 @@ Figures~\ref{fig:heatmaps_fake} and~\ref{fig:heatmaps_real} show individual Grad
 \subsection{Calibration Discussion}
 
 The model achieved an ECE of 0.0026 before calibration, which is remarkably low --- when the model says it is 95\% confident, it is correct approximately 95\% of the time. Temperature scaling learned $T = 1.2189$, confirming slight overconfidence as expected for modern deep networks (Guo et al., 2017). However, because the pre-calibration ECE was already so low, applying temperature scaling actually \emph{increased} ECE slightly to 0.0113. This is a known edge case with temperature scaling --- it optimises negative log-likelihood, not ECE directly, and on already well-calibrated models the correction can be counterproductive.
+
+% ══════════════════════════════════════════════════════════════
+\section{Cross-Generator Generalisation Study}
+\label{sec:generalisation}
+
+The core research contribution of this project is a systematic evaluation of the CIFAKE-trained detector on images from progressively newer generative models. The detector was tested on five generator families, each represented by 300 AI-generated images paired with a balanced subsample of 300 CIFAKE \texttt{test/REAL} images (seed~42):
+
+\begin{itemize}[noitemsep]
+    \item \textbf{StyleGAN} --- older GAN architecture (OwensLab/CommunityForensics-Eval)
+    \item \textbf{SD3/Flux} --- modern diffusion models (Defactify Image Dataset)
+    \item \textbf{Midjourney v6} --- proprietary diffusion (Defactify Image Dataset)
+    \item \textbf{GPT-4o} --- autoregressive hybrid (Yejy53/GPT-ImgEval)
+    \item \textbf{Janus-Pro} --- autoregressive (midbee/Janus-Pro-R1-Data, source=Janus-Pro-7B)
+\end{itemize}
+
+\subsection{Generalisation Results}
+
+Table~\ref{tab:generalisation} presents the full cross-generator evaluation results.
+
+\begin{table}[H]
+\centering
+\caption{Cross-generator generalisation results.}
+\label{tab:generalisation}
+\small
+\begin{tabular}{lcccccccc}
+\toprule
+\textbf{Generator} & \textbf{Acc.} & \textbf{Fake Det.} & \textbf{AUC} & \textbf{F1} & \textbf{ECE} & \textbf{ECE} & \textbf{Drop} & \textbf{Drop} \\
+ & & \textbf{Rate} & & \textbf{(FAKE)} & \textbf{(pre-T)} & \textbf{(post-T)} & \textbf{(abs)} & \textbf{(rel)} \\
+\midrule
+CIFAKE (baseline) & 0.9696 & --- & 0.9971 & --- & 0.0026 & 0.0113 & 0.0000 & 0.0\% \\
+GPT-4o            & \textbf{0.9233} & \textbf{0.8633} & 0.9926 & 0.9184 & 0.0083 & 0.0209 & 0.0463 & \textbf{4.8\%} \\
+Janus-Pro         & 0.9617 & 0.9400 & 0.9958 & 0.9608 & 0.0199 & 0.0334 & 0.0079 & 0.8\% \\
+Midjourney v6     & 0.9617 & 0.9400 & 0.9955 & 0.9608 & 0.0338 & 0.0454 & 0.0079 & 0.8\% \\
+SD3/Flux          & 0.9767 & 0.9700 & 0.9975 & 0.9765 & 0.0229 & 0.0363 & $-$0.0071 & $-$0.7\% \\
+StyleGAN          & 0.9617 & 0.9400 & 0.9945 & 0.9608 & 0.0342 & 0.0514 & 0.0079 & 0.8\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{outputs/plots/cross_generator_accuracy.png}
+\caption{Cross-generator detection accuracy with CIFAKE baseline reference.}
+\label{fig:cross_gen_accuracy}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{outputs/plots/degradation_waterfall.png}
+\caption{Performance degradation waterfall chart across generator families.}
+\label{fig:degradation}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{outputs/plots/confidence_distributions_by_generator.png}
+\caption{Confidence distribution $P(\text{FAKE})$ on AI-generated images by generator family.}
+\label{fig:confidence_dist}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{outputs/plots/ece_comparison_by_generator.png}
+\caption{Calibration (ECE) under distribution shift --- before and after temperature scaling.}
+\label{fig:ece_comparison}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{outputs/plots/gradcam_comparison_grid.png}
+\caption{Grad-CAM failure analysis: false negatives by generator family.}
+\label{fig:gradcam_grid}
+\end{figure}
+
+\subsection{Key Findings}
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{GPT-4o is the only generator with meaningful degradation.} At 92.33\% accuracy (4.8\% relative drop) and only 86.33\% fake detection rate, nearly 14\% of GPT-4o images fooled the detector. All other generators remained at or above 96\% accuracy.
+
+    \item \textbf{The autoregressive hypothesis was partially wrong.} The original hypothesis predicted that autoregressive generators (GPT-4o, Janus-Pro) would cause degradation because they generate images fundamentally differently from diffusion models. However, Janus-Pro (also autoregressive) performed at 96.17\% accuracy --- identical to StyleGAN and Midjourney. The generalisation gap is \emph{GPT-4o-specific}, not a general weakness against autoregressive generators.
+
+    \item \textbf{Diffusion-to-diffusion transfer works well.} SD3/Flux actually \emph{exceeded} the CIFAKE baseline ($-$0.7\% ``degradation''), confirming that diffusion-model texture artefacts are sufficiently similar across SD generations for the detector to transfer.
+
+    \item \textbf{Calibration does not transfer.} The CIFAKE-fitted temperature ($T = 1.2189$) worsened ECE on all out-of-distribution sets (post-T ECE ranged from 0.0209 to 0.0514, compared to 0.0113 on CIFAKE). Future deployments should fit calibration per target distribution or use methods robust to distribution shift.
+\end{enumerate}
+
+% ══════════════════════════════════════════════════════════════
+\section{GPT-4o Investigation}
+\label{sec:gpt4o}
+
+Given that GPT-4o was the sole generator with meaningful degradation, a follow-up investigation was conducted to determine \emph{why} the detector fails specifically on GPT-4o images. Three complementary analyses were performed at the frequency, representation, and attention levels.
+
+\subsection{FFT Radial Power Spectrum}
+
+Each image was converted to grayscale, a 2-D FFT was applied, and the radial average of the power spectrum was computed. The mean spectrum (with standard deviation bands) was plotted for 150 images per family (Figure~\ref{fig:fft_spectrum}).
+
+This analysis tests whether GPT-4o images lack the frequency-domain artefacts characteristic of Stable Diffusion v1.4 outputs. If GPT-4o's spectral profile overlaps with CIFAKE REAL rather than CIFAKE FAKE, it would indicate that the detector's learned frequency-based features are absent from GPT-4o images.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{outputs/plots/gpt4o_investigation/radial_power_spectra.png}
+\caption{Radial power spectrum comparison across generator families.}
+\label{fig:fft_spectrum}
+\end{figure}
+
+\subsection{Feature-Space Visualisation (t-SNE)}
+
+Penultimate-layer embeddings (1,536 dimensions) were extracted from the EfficientNet-B3 global average pooling layer using a forward hook. 150 images per family were processed, and the combined embeddings were projected to 2-D using t-SNE (perplexity=30, seed=42).
+
+This reveals whether GPT-4o images cluster with CIFAKE REAL images (indicating the model's internal representation treats them as real-looking) or with CIFAKE FAKE images (indicating a threshold or calibration issue).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{outputs/plots/gpt4o_investigation/feature_space_tsne.png}
+\caption{t-SNE projection of EfficientNet-B3 embeddings by generator family.}
+\label{fig:tsne}
+\end{figure}
+
+\subsection{Quantitative Grad-CAM Metrics}
+
+To move beyond qualitative heatmap inspection, three quantitative metrics were computed on the raw Grad-CAM activation maps for 100 FAKE images per family (Table~\ref{tab:gradcam_metrics}):
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Activation entropy} --- high values indicate diffuse, unfocused attention.
+    \item \textbf{Peak activation ratio} --- the fraction of total activation in the top 10\% of pixels; higher values indicate concentrated attention on specific artefacts.
+    \item \textbf{Gini coefficient} --- measures inequality of activation distribution; higher values indicate more spatially concentrated attention.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Grad-CAM attention metrics by generator family (FAKE images only).}
+\label{tab:gradcam_metrics}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Family} & \textbf{Mean Entropy} & \textbf{Mean Peak Ratio} & \textbf{Mean Gini} \\
+\midrule
+CIFAKE FAKE    & \textbf{10.197} & \textbf{0.339} & \textbf{0.574} \\
+GPT-4o         & 10.291 & 0.309 & 0.529 \\
+Janus-Pro      & 10.355 & 0.295 & 0.498 \\
+Midjourney v6  & 10.376 & 0.282 & 0.478 \\
+SD3/Flux       & 10.380 & 0.282 & 0.488 \\
+StyleGAN       & 10.319 & 0.317 & 0.518 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{outputs/plots/gpt4o_investigation/gradcam_entropy_comparison.png}
+\caption{Grad-CAM entropy distribution by generator family.}
+\label{fig:gradcam_entropy}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{outputs/plots/gpt4o_investigation/gradcam_peak_ratio_comparison.png}
+    \caption{Peak activation ratio.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{outputs/plots/gpt4o_investigation/gradcam_gini_comparison.png}
+    \caption{Gini coefficient.}
+\end{subfigure}
+\caption{Grad-CAM spatial concentration metrics by generator family.}
+\label{fig:gradcam_spatial}
+\end{figure}
+
+\subsection{Investigation Conclusions}
+
+CIFAKE FAKE images show the most focused attention (lowest entropy 10.197, highest Gini 0.574), confirming the model knows precisely where to look for SD~v1.4 artefacts. However, GPT-4o's attention metrics are \emph{not dramatically different} from well-detected families: Midjourney and SD3/Flux have higher entropy (10.376--10.380) and lower peak ratios (0.282) than GPT-4o (10.291 entropy, 0.309 peak ratio), yet achieve 96--97\% accuracy.
+
+This rules out the hypothesis that the model ``does not know where to look'' on GPT-4o images. Instead, the degradation is a \textbf{feature-absence problem}: the model attends to reasonable spatial locations but finds no recognisable artefacts to latch onto. GPT-4o's rendering pipeline simply does not produce the spectral fingerprints that Stable Diffusion v1.4 generates, leaving the detector without a learnable signal regardless of where it attends.
 
 % ══════════════════════════════════════════════════════════════
 \section{Completed Milestones}
@@ -616,28 +789,59 @@ The model achieved an ECE of 0.0026 before calibration, which is remarkably low 
     \item Ensured evaluation pipeline is stable and reproducible (26 unit tests passing, fixed random seed 42).
 \end{itemize}
 
+\subsection{Milestone 4: Generalisation Study and GPT-4o Investigation (July 6 -- July 20)}
+
+\begin{itemize}[noitemsep]
+    \item Collected 300 images per generator family from five sources (StyleGAN, SD3/Flux, Midjourney~v6, GPT-4o, Janus-Pro) via streaming from HuggingFace datasets.
+    \item Evaluated the CIFAKE-trained detector on all five families, measuring accuracy, fake detection rate, AUC, F1, and ECE.
+    \item Computed degradation metrics relative to the CIFAKE baseline, identifying GPT-4o as the only family with meaningful performance loss (4.8\% relative accuracy drop).
+    \item Ran Grad-CAM failure analysis on the 16 most confident false negatives and 16 lowest-confidence correct detections per family.
+    \item Conducted a three-level GPT-4o investigation (FFT frequency analysis, t-SNE feature-space visualisation, quantitative Grad-CAM metrics) to diagnose the root cause of degradation.
+    \item Identified that the GPT-4o gap is a feature-absence problem, not an attention-failure problem --- the model attends to reasonable locations but finds no artefacts.
+    \item Submitted Progress Report summarising Milestones 1--3 and planned next steps.
+\end{itemize}
+
 % ══════════════════════════════════════════════════════════════
 \section{Current Limitations and Planned Next Steps}
 
 \subsection{Limitations}
 
 \begin{enumerate}[noitemsep]
-    \item \textbf{Single-generator training data.} The model is trained exclusively on CIFAKE, which contains images from Stable Diffusion v1.4. Its performance on images from other generators is unknown.
-    \item \textbf{Low input resolution.} CIFAKE images are $32 \times 32$, which limits the amount of high-frequency detail available for detection. Higher-resolution datasets may reveal different artefact patterns.
-    \item \textbf{Generator-specific features.} Grad-CAM analysis suggests the model relies on Stable Diffusion-specific texture artefacts, which newer generators may not produce.
+    \item \textbf{Single-generator training data.} The model is trained exclusively on CIFAKE (Stable Diffusion v1.4). The generalisation study (Section~\ref{sec:generalisation}) confirmed this is a root cause: the detector learned SD-specific artefacts that do not transfer to GPT-4o. However, it transfers surprisingly well to StyleGAN, Midjourney, SD3/Flux, and Janus-Pro.
+
+    \item \textbf{Low input resolution.} CIFAKE images are $32 \times 32$ (upscaled to $224 \times 224$), limiting the high-frequency detail available for detection. The FFT analysis (Section~\ref{sec:gpt4o}) showed that frequency-domain differences between generators exist, but the low resolution constrains the spectral range the model can exploit.
+
+    \item \textbf{Generator-specific features confirmed.} The three-level GPT-4o investigation confirmed that the model relies on SD-specific texture artefacts. The degradation on GPT-4o is a \emph{feature-absence problem}: the model's spatial attention is comparable to well-detected families, but GPT-4o images lack the artefacts the model has learned to detect.
+
+    \item \textbf{Calibration does not transfer.} Temperature scaling fitted on CIFAKE ($T = 1.2189$) worsened ECE on all out-of-distribution generator families (post-T ECE ranged from 0.0209 to 0.0514). Calibration methods need to be adapted per deployment distribution.
+
+    \item \textbf{GPT-4o-specific blind spot.} Despite testing two autoregressive generators, only GPT-4o showed degradation. The root cause remains partially unexplained --- Janus-Pro (also autoregressive) is detected at 96.17\%, suggesting the gap is specific to GPT-4o's rendering pipeline rather than the autoregressive paradigm.
 \end{enumerate}
 
-\subsection{Planned Next Steps}
+\subsection{Future Work}
+
+Based on the findings from the generalisation study and GPT-4o investigation, the following directions are recommended for future research:
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Train on multi-generator datasets.} Datasets such as GenImage (which includes DALL-E, Midjourney, and Stable Diffusion) would expose the model to a broader range of generation artefacts, enabling it to learn more transferable features rather than SD-specific ones.
+
+    \item \textbf{Use higher-resolution training data.} Higher-resolution images would provide more high-frequency detail for detection. The FFT analysis showed that frequency-domain differences exist between generators, but the $32 \times 32$ CIFAKE resolution limits the spectral range available.
+
+    \item \textbf{Incorporate frequency-domain features.} The current model relies entirely on spatial features. Adding FFT-based frequency features --- such as the radial power spectrum analysis developed in this project --- alongside the spatial CNN features could improve robustness to generators that do not produce traditional spatial artefacts.
+
+    \item \textbf{Evaluate ensemble approaches.} Combining models trained on different generator families, or mixing spatial and frequency-domain classifiers, may improve cross-generator robustness where single-model approaches fail.
+\end{enumerate}
+
+\subsection{Remaining Milestones}
 
 \begin{table}[H]
 \centering
-\caption{Planned milestones.}
+\caption{Remaining milestones.}
 \label{tab:milestones}
 \begin{tabular}{lll}
 \toprule
 \textbf{Milestone} & \textbf{Period} & \textbf{Tasks} \\
 \midrule
-4 --- Generalisation & Jul 6--20 & \parbox[t]{7.5cm}{Evaluate detector on StyleGAN, Stable Diffusion, Midjourney~v6, and GPT-4o images. Measure performance degradation. Analyse failure cases with Grad-CAM.} \\[1em]
 5 --- Interactive Demo & Jul 21--Aug 10 & \parbox[t]{7.5cm}{Build Gradio web interface combining model, calibration, and Grad-CAM. End-to-end testing.} \\[1em]
 6 --- Final Report & Aug 11--28 & \parbox[t]{7.5cm}{Write final report. Prepare visualisations. Finalise codebase and documentation.} \\
 \bottomrule
@@ -656,6 +860,8 @@ All code, notebooks, tests, and results are available at:\\
     \item \texttt{02\_baseline\_training.ipynb} --- Hyperparameter sweep and full training
     \item \texttt{03\_calibration.ipynb} --- Temperature scaling, threshold analysis, confusion matrix, ROC curve
     \item \texttt{04\_gradcam.ipynb} --- Grad-CAM heatmap generation and analysis
+    \item \texttt{05\_generalisation\_eval.ipynb} --- Cross-generator evaluation across five families
+    \item \texttt{06\_gpt4o\_investigation.ipynb} --- GPT-4o investigation (FFT, t-SNE, Grad-CAM metrics)
 \end{itemize}
 
 \subsection*{Source Modules}
@@ -663,8 +869,12 @@ All code, notebooks, tests, and results are available at:\\
     \item \texttt{src/model/detector.py} --- EfficientNet-B3 build, checkpoint save/load
     \item \texttt{src/evaluation/metrics.py} --- Accuracy, AUC, ECE, reliability diagrams, ROC curves
     \item \texttt{src/evaluation/calibration.py} --- Temperature scaling (learned via L-BFGS)
-    \item \texttt{src/explainability/gradcam.py} --- Grad-CAM heatmap generation and overlay
-    \item \texttt{src/utils/data\_loader.py} --- CIFAKE data loading with train/val/test splits
+    \item \texttt{src/evaluation/generalisation.py} --- Cross-generator evaluation, degradation metrics, plots
+    \item \texttt{src/explainability/gradcam.py} --- Grad-CAM heatmap generation, failure analysis, comparison grids
+    \item \texttt{src/analysis/frequency.py} --- FFT radial power spectrum analysis
+    \item \texttt{src/analysis/embeddings.py} --- Feature-space t-SNE visualisation via forward hooks
+    \item \texttt{src/analysis/gradcam\_metrics.py} --- Quantitative Grad-CAM metrics (entropy, peak ratio, Gini)
+    \item \texttt{src/utils/data\_loader.py} --- CIFAKE and generalisation data loading
 \end{itemize}
 
 \subsection*{Tests}
