@@ -21,9 +21,6 @@ import torch.nn as nn
 from PIL import Image
 from torch.utils.data import DataLoader, TensorDataset
 
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from src.utils.data_loader import (
     discover_generator_families,
     get_generalisation_loader,

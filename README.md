@@ -50,7 +50,8 @@ ai-image-detection/
 │   ├── 02_baseline_training.ipynb
 │   ├── 03_calibration.ipynb
 │   ├── 04_gradcam.ipynb
-│   └── 05_generalisation_eval.ipynb  # Milestone 4: cross-generator evaluation
+│   ├── 05_generalisation_eval.ipynb  # Milestone 4: cross-generator evaluation
+│   └── 06_gpt4o_investigation.ipynb  # GPT-4o deep-dive: FFT, t-SNE, Grad-CAM metrics
 ├── scripts/
 │   └── download_generalisation_data.py  # Streaming HuggingFace download helper
 ├── src/
@@ -212,6 +213,54 @@ pytest tests/ -v
 | `src/explainability/gradcam.py` | `batch_gradcam_failures()`, `comparative_grid()` |
 
 Label convention: **0 = FAKE, 1 = REAL** (matches CIFAKE ImageFolder ordering).
+
+---
+
+## Milestone 5: Interactive Demo
+
+A Gradio web interface that combines the trained detector, temperature-scaled calibration, and Grad-CAM explainability into a single interactive tool.
+
+### Prerequisites
+
+- Trained checkpoint at `outputs/checkpoints/best_detector.pth`
+- Baseline results at `outputs/results/baseline_results.json`
+- Dependencies installed: `pip install -r requirements.txt`
+
+### Local Launch
+
+```bash
+python app.py
+# Opens at http://localhost:7860
+```
+
+### Google Colab Launch
+
+```bash
+python app.py --share
+# Generates a public gradio.live URL accessible from any browser
+```
+
+### What the Demo Shows
+
+- **Classification:** Upload any image to get a REAL/FAKE prediction
+- **Calibrated confidence:** Temperature-scaled probability scores (T=1.2189)
+- **Grad-CAM heatmap:** Visual explanation highlighting which image regions influenced the decision
+- **Confidence tiers:** High / Moderate / Low confidence indicators
+- **Contextual notes:** Calibration methodology and generalisation limitations
+
+### Key Files
+
+| File | Role |
+|---|---|
+| `app.py` | Gradio application — inference pipeline + UI |
+| `tests/test_app.py` | 13 unit tests covering pipeline, edge cases, and UI construction |
+| `data/demo_samples/` | Example images for one-click testing via `gr.Examples` |
+
+### Running Tests
+
+```bash
+pytest tests/test_app.py -v
+```
 
 ---
 
