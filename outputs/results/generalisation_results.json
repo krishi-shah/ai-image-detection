@@ -1,0 +1,147 @@
+{
+  "gpt4o": {
+    "family": "gpt4o",
+    "n_samples": 600,
+    "n_fake": 300,
+    "n_real": 300,
+    "accuracy": 0.9233333333333333,
+    "fake_detection_rate": 0.8633333333333333,
+    "auc": 0.9925888888888889,
+    "precision_fake": 0.9810606060606061,
+    "recall_fake": 0.8633333333333333,
+    "f1_fake": 0.9184397163120568,
+    "ece_pre_calibration": 0.008286397258440638,
+    "ece_post_calibration": 0.020942297577857972,
+    "confusion_matrix": [
+      [
+        259,
+        41
+      ],
+      [
+        5,
+        295
+      ]
+    ],
+    "confidence_stats": {
+      "mean_p_fake": 0.8160346150398254,
+      "median_p_fake": 0.9287404417991638
+    },
+    "temperature_used": 1.2189
+  },
+  "janus_pro": {
+    "family": "janus_pro",
+    "n_samples": 600,
+    "n_fake": 300,
+    "n_real": 300,
+    "accuracy": 0.9616666666666667,
+    "fake_detection_rate": 0.94,
+    "auc": 0.9958111111111111,
+    "precision_fake": 0.9825783972125436,
+    "recall_fake": 0.94,
+    "f1_fake": 0.9608177172061328,
+    "ece_pre_calibration": 0.019905908207098613,
+    "ece_post_calibration": 0.033447935183843,
+    "confusion_matrix": [
+      [
+        282,
+        18
+      ],
+      [
+        5,
+        295
+      ]
+    ],
+    "confidence_stats": {
+      "mean_p_fake": 0.8835681080818176,
+      "median_p_fake": 0.9621542692184448
+    },
+    "temperature_used": 1.2189
+  },
+  "midjourney_v6": {
+    "family": "midjourney_v6",
+    "n_samples": 600,
+    "n_fake": 300,
+    "n_real": 300,
+    "accuracy": 0.9616666666666667,
+    "fake_detection_rate": 0.94,
+    "auc": 0.9954555555555555,
+    "precision_fake": 0.9825783972125436,
+    "recall_fake": 0.94,
+    "f1_fake": 0.9608177172061328,
+    "ece_pre_calibration": 0.033784177005290995,
+    "ece_post_calibration": 0.04536205947399137,
+    "confusion_matrix": [
+      [
+        282,
+        18
+      ],
+      [
+        5,
+        295
+      ]
+    ],
+    "confidence_stats": {
+      "mean_p_fake": 0.8712121844291687,
+      "median_p_fake": 0.9312707185745239
+    },
+    "temperature_used": 1.2189
+  },
+  "sd3_flux": {
+    "family": "sd3_flux",
+    "n_samples": 600,
+    "n_fake": 300,
+    "n_real": 300,
+    "accuracy": 0.9766666666666667,
+    "fake_detection_rate": 0.97,
+    "auc": 0.9975222222222223,
+    "precision_fake": 0.9831081081081081,
+    "recall_fake": 0.97,
+    "f1_fake": 0.9765100671140939,
+    "ece_pre_calibration": 0.02289972354968384,
+    "ece_post_calibration": 0.036338086724281335,
+    "confusion_matrix": [
+      [
+        291,
+        9
+      ],
+      [
+        5,
+        295
+      ]
+    ],
+    "confidence_stats": {
+      "mean_p_fake": 0.9188008904457092,
+      "median_p_fake": 0.9704975485801697
+    },
+    "temperature_used": 1.2189
+  },
+  "stylegan": {
+    "family": "stylegan",
+    "n_samples": 600,
+    "n_fake": 300,
+    "n_real": 300,
+    "accuracy": 0.9616666666666667,
+    "fake_detection_rate": 0.94,
+    "auc": 0.9944777777777778,
+    "precision_fake": 0.9825783972125436,
+    "recall_fake": 0.94,
+    "f1_fake": 0.9608177172061328,
+    "ece_pre_calibration": 0.03421784033377962,
+    "ece_post_calibration": 0.05138561864693956,
+    "confusion_matrix": [
+      [
+        282,
+        18
+      ],
+      [
+        5,
+        295
+      ]
+    ],
+    "confidence_stats": {
+      "mean_p_fake": 0.8495166301727295,
+      "median_p_fake": 0.9128604531288147
+    },
+    "temperature_used": 1.2189
+  }
+}

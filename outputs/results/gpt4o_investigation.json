@@ -1,0 +1,58 @@
+{
+  "gradcam_metrics": {
+    "CIFAKE_FAKE": {
+      "mean_entropy": 10.196917599605063,
+      "std_entropy": 0.22970474288322257,
+      "mean_peak_ratio": 0.3391763265430927,
+      "std_peak_ratio": 0.07788756193926197,
+      "mean_gini": 0.5739788119139787,
+      "std_gini": 0.09815738346197611,
+      "n_images": 100
+    },
+    "gpt4o": {
+      "mean_entropy": 10.291369544441682,
+      "std_entropy": 0.21783656975261015,
+      "mean_peak_ratio": 0.30852693036198614,
+      "std_peak_ratio": 0.07285119678400001,
+      "mean_gini": 0.5293722754309127,
+      "std_gini": 0.10708432903013225,
+      "n_images": 100
+    },
+    "janus_pro": {
+      "mean_entropy": 10.355061521331445,
+      "std_entropy": 0.20534845316477546,
+      "mean_peak_ratio": 0.29495441779494286,
+      "std_peak_ratio": 0.06940909812209382,
+      "mean_gini": 0.49789301424298954,
+      "std_gini": 0.11084269428333121,
+      "n_images": 100
+    },
+    "midjourney_v6": {
+      "mean_entropy": 10.376288059579906,
+      "std_entropy": 0.2924571653552167,
+      "mean_peak_ratio": 0.28237585484981537,
+      "std_peak_ratio": 0.09257362466207189,
+      "mean_gini": 0.47799298813960556,
+      "std_gini": 0.11737623953136263,
+      "n_images": 100
+    },
+    "sd3_flux": {
+      "mean_entropy": 10.380258792805034,
+      "std_entropy": 0.16921288369792206,
+      "mean_peak_ratio": 0.28243661016225813,
+      "std_peak_ratio": 0.0648229662713941,
+      "mean_gini": 0.4875985455975117,
+      "std_gini": 0.09228294211199413,
+      "n_images": 100
+    },
+    "stylegan": {
+      "mean_entropy": 10.31944567289467,
+      "std_entropy": 0.23333113515754572,
+      "mean_peak_ratio": 0.317223746329546,
+      "std_peak_ratio": 0.08623498210210552,
+      "mean_gini": 0.5175614776043903,
+      "std_gini": 0.10344769470529507,
+      "n_images": 100
+    }
+  }
+}

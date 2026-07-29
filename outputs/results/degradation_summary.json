@@ -1,0 +1,57 @@
+{
+  "gpt4o": {
+    "family": "gpt4o",
+    "baseline_accuracy": 0.9696,
+    "generator_accuracy": 0.9233333333333333,
+    "accuracy_drop_absolute": 0.04626666666666668,
+    "accuracy_drop_relative": 0.04771727172717273,
+    "baseline_auc": 0.9971,
+    "generator_auc": 0.9925888888888889,
+    "auc_drop_absolute": 0.004511111111111132,
+    "auc_drop_relative": 0.004524231382119278
+  },
+  "janus_pro": {
+    "family": "janus_pro",
+    "baseline_accuracy": 0.9696,
+    "generator_accuracy": 0.9616666666666667,
+    "accuracy_drop_absolute": 0.007933333333333348,
+    "accuracy_drop_relative": 0.008182068206820697,
+    "baseline_auc": 0.9971,
+    "generator_auc": 0.9958111111111111,
+    "auc_drop_absolute": 0.001288888888888895,
+    "auc_drop_relative": 0.0012926375377483653
+  },
+  "midjourney_v6": {
+    "family": "midjourney_v6",
+    "baseline_accuracy": 0.9696,
+    "generator_accuracy": 0.9616666666666667,
+    "accuracy_drop_absolute": 0.007933333333333348,
+    "accuracy_drop_relative": 0.008182068206820697,
+    "baseline_auc": 0.9971,
+    "generator_auc": 0.9954555555555555,
+    "auc_drop_absolute": 0.0016444444444444484,
+    "auc_drop_relative": 0.0016492272033341174
+  },
+  "sd3_flux": {
+    "family": "sd3_flux",
+    "baseline_accuracy": 0.9696,
+    "generator_accuracy": 0.9766666666666667,
+    "accuracy_drop_absolute": -0.0070666666666666655,
+    "accuracy_drop_relative": -0.0072882288228822865,
+    "baseline_auc": 0.9971,
+    "generator_auc": 0.9975222222222223,
+    "auc_drop_absolute": -0.00042222222222232375,
+    "auc_drop_relative": -0.000423450227883185
+  },
+  "stylegan": {
+    "family": "stylegan",
+    "baseline_accuracy": 0.9696,
+    "generator_accuracy": 0.9616666666666667,
+    "accuracy_drop_absolute": 0.007933333333333348,
+    "accuracy_drop_relative": 0.008182068206820697,
+    "baseline_auc": 0.9971,
+    "generator_auc": 0.9944777777777778,
+    "auc_drop_absolute": 0.0026222222222221925,
+    "auc_drop_relative": 0.0026298487836949077
+  }
+}
