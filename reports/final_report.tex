@@ -1,0 +1,364 @@
+\documentclass[12pt,a4paper]{article}
+
+% NOTE FOR OVERLEAF: Keep outputs/ relative to the project root (or adjust paths).
+% Heatmap filenames use underscores (no spaces).
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{grffile}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small AI-Generated Image Detection}
+\fancyhead[R]{\small Final Report}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2.5cm}
+{\Huge\bfseries Final Report\par}
+\vspace{1cm}
+{\LARGE AI-Generated Image Detection\par}
+\vspace{0.5cm}
+{\large\itshape Evaluating Generalisation Across Generative Model Generations\par}
+\vspace{2.5cm}
+\begin{tabular}{rl}
+\textbf{Author:}      & Krishi Rajeshkumar Shah (220968905) \\
+\textbf{Supervisor:}   & Mona Nasery \\
+\textbf{Course:}       & EECS 4080 --- Computer Science Project \\
+\textbf{Institution:}  & York University \\
+\textbf{Term:}         & Summer 2026 \\
+\textbf{Repository:}   & \url{https://github.com/krishi-shah/ai-image-detection} \\
+\end{tabular}
+\vfill
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ══════════════════════════════════════════════════════════════
+\section{Abstract}
+
+AI-image detectors trained on older generative models may fail as newer architectures close the perceptual gap with real photographs. This project fine-tunes an EfficientNet-B3 on CIFAKE (Stable Diffusion v1.4), adds temperature scaling and Grad-CAM explainability, and evaluates transfer to StyleGAN, SD3/Flux, Midjourney~v6, GPT-4o, and Janus-Pro. In-distribution performance is strong (96.96\% accuracy, AUC 0.9971, ECE 0.0026). Cross-generator transfer is surprisingly robust for four of five families (94--97\% fake detection). Only GPT-4o shows a meaningful gap (86.3\% fake detection). Frequency analysis, t-SNE embeddings, and quantitative Grad-CAM indicate a \textbf{feature-absence} failure on GPT-4o rather than an attention failure. A resolution-matched control tests whether high transfer was confounded by pairing high-resolution fakes with low-resolution CIFAKE reals. The original chronological generalisation-gap hypothesis is refined: the gap is GPT-4o-specific, not universal across newer generators.
+
+% ══════════════════════════════════════════════════════════════
+\section{Introduction and Motivation}
+
+Detection tools for AI-generated images are typically trained and evaluated on older generators. As Stable Diffusion~3, Midjourney~v6, and GPT-4o produce increasingly realistic outputs, a practical question follows: \textbf{do existing detectors still work, and if not, why?}
+
+\medskip
+\noindent\textbf{Research Question:} \emph{How well do AI-generated image detectors trained on current benchmark datasets generalise to images produced by next-generation generative models, and what accounts for the performance gap?}
+
+\medskip
+\noindent\textbf{Original hypothesis:} Detectors rely on low-level statistical artefacts specific to the training generator; these artefacts are weaker or absent in newer models, producing a measurable generalisation gap that widens with generator novelty.
+
+% ══════════════════════════════════════════════════════════════
+\section{Literature Review and Research Gap}
+
+\textbf{Wang et al.\ (2020)} showed ProGAN-trained detectors can transfer across GANs under strong augmentation, but the study predates diffusion models. \textbf{Bird and Lotfi (2024)} introduced CIFAKE and demonstrated $>$92\% detection accuracy. \textbf{Corvi et al.\ (2023)} documented a clear GAN$\leftrightarrow$diffusion gap with frequency-domain separation. \textbf{Gragnaniello et al.\ (2021)} characterised generator-specific fingerprints. \textbf{Guo et al.\ (2017)} proposed temperature scaling. \textbf{Selvaraju et al.\ (2017)} introduced Grad-CAM.
+
+\medskip
+\noindent\textbf{Research gap:} No prior student-scale study combines multi-family chronological evaluation, calibration under shift, comparative Grad-CAM, measurement (not a new detector), and a resolution-matched control for the real-reference protocol.
+
+% ══════════════════════════════════════════════════════════════
+\section{Datasets}
+
+\subsection{CIFAKE}
+
+\begin{table}[H]
+\centering
+\caption{CIFAKE properties (on-disk counts used in this project).}
+\label{tab:cifake}
+\begin{tabular}{ll}
+\toprule
+\textbf{Property} & \textbf{Detail} \\
+\midrule
+Total on disk      & 120{,}000 (100K train + 20K test) \\
+Real               & 60{,}000 (CIFAR-10; 50K train + 10K test) \\
+AI-generated       & 60{,}000 (SD v1.4; 50K train + 10K test) \\
+Resolution         & $32\times32$ (upscaled to $224\times224$) \\
+Labels             & FAKE $=0$, REAL $=1$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textit{Note:} The paper/Kaggle card often cite 60{,}000 images. Experiments use the on-disk archive above. Train/val = 80/20 of the training folder (seed 42).
+
+\subsection{Cross-generator families}
+
+StyleGAN, SD3/Flux, Midjourney~v6, GPT-4o, and Janus-Pro --- 300 FAKE images each, paired with 300 CIFAKE \texttt{test/REAL} images (seed 42). \textbf{Protocol caveat:} reals are low-resolution upscales; fakes are high-resolution downscales (addressed in Experiment~5).
+
+% ══════════════════════════════════════════════════════════════
+\section{Methodology}
+
+\subsection{Architecture}
+EfficientNet-B3 (ImageNet pretrained via \texttt{timm}) with classifier \texttt{Linear(1536, 2)}.
+
+\subsection{Training}
+AdamW, CosineAnnealingLR ($T_{\max}=20$), CrossEntropyLoss, batch size 32, seed 42. Hyperparameter sweep over 2 learning rates $\times$ 3 weight decays (3 epochs), then full training (20 epochs). Best checkpoint: epoch 2, validation accuracy 0.9694.
+
+\subsection{Calibration}
+Temperature scaling learned on validation logits via L-BFGS: $T=1.2189$.
+
+\subsection{Grad-CAM}
+Target layer: \texttt{model.conv\_head} (final convolutional head of EfficientNet-B3).
+
+\subsection{Metrics}
+Accuracy, AUC-ROC, ECE, F1 (FAKE), fake detection rate (FAKE recall), degradation vs.\ CIFAKE baseline.
+
+% ══════════════════════════════════════════════════════════════
+\section{Experiment 1: CIFAKE Baseline}
+
+\begin{table}[H]
+\centering
+\caption{CIFAKE test-set performance.}
+\label{tab:baseline}
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Test accuracy     & \textbf{96.96\%} \\
+AUC-ROC           & \textbf{0.9971} \\
+ECE (pre-$T$)     & 0.0026 \\
+ECE (post-$T$)    & 0.0113 \\
+Temperature       & 1.2189 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+FAKE recall 95.29\%; REAL recall 98.63\%. Confusion: TP 9{,}529, FN 471, FP 137, TN 9{,}863. Pre-calibration ECE was already excellent; temperature scaling (optimising NLL) slightly over-corrected ECE on CIFAKE.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{outputs/plots/confusion_matrix.png}
+\caption{Confusion matrix on CIFAKE test set.}
+\label{fig:cm}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{outputs/plots/roc_curve.png}
+\caption{ROC curve (AUC $= 0.9971$).}
+\label{fig:roc}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{outputs/plots/calibration_comparison.png}
+\caption{Calibration before vs.\ after temperature scaling.}
+\label{fig:cal}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════
+\section{Experiment 2: Grad-CAM Explainability}
+
+REAL images show diffuse attention over natural textures at high confidence. FAKE images show more localised activation on generation artefacts. This supports reliance on SD~v1.4-specific low-level cues.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{outputs/plots/gradcam_comparison.png}
+\caption{Grad-CAM comparison --- FAKE vs.\ REAL.}
+\label{fig:gradcam}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[b]{0.24\textwidth}
+\includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_48_5.jpg}
+\end{subfigure}
+\begin{subfigure}[b]{0.24\textwidth}
+\includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_516.jpg}
+\end{subfigure}
+\begin{subfigure}[b]{0.24\textwidth}
+\includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_518_3.jpg}
+\end{subfigure}
+\begin{subfigure}[b]{0.24\textwidth}
+\includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_52_10.jpg}
+\end{subfigure}
+\caption{Example FAKE Grad-CAM heatmaps --- localised artefact attention.}
+\label{fig:hm_fake}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════
+\section{Experiment 3: Cross-Generator Generalisation}
+\label{sec:gen}
+
+\begin{table}[H]
+\centering
+\caption{Cross-generator results. Fake detection rate is the primary OOD metric.}
+\label{tab:gen}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Generator} & \textbf{Acc.} & \textbf{Fake Det.} & \textbf{AUC} & \textbf{ECE$_\mathrm{pre}$} & \textbf{ECE$_\mathrm{post}$} & \textbf{Drop} \\
+\midrule
+CIFAKE & 0.9696 & --- & 0.9971 & 0.0026 & 0.0113 & 0\% \\
+GPT-4o & \textbf{0.9233} & \textbf{0.8633} & 0.9926 & 0.0083 & 0.0209 & \textbf{4.8\%} \\
+Janus-Pro & 0.9617 & 0.9400 & 0.9958 & 0.0199 & 0.0334 & 0.8\% \\
+Midjourney v6 & 0.9617 & 0.9400 & 0.9955 & 0.0338 & 0.0454 & 0.8\% \\
+SD3/Flux & 0.9767 & 0.9700 & 0.9975 & 0.0229 & 0.0363 & $-$0.7\% \\
+StyleGAN & 0.9617 & 0.9400 & 0.9945 & 0.0342 & 0.0514 & 0.8\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{outputs/plots/cross_generator_accuracy.png}
+\caption{Cross-generator accuracy with CIFAKE baseline.}
+\label{fig:xacc}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{outputs/plots/degradation_waterfall.png}
+\caption{Accuracy degradation waterfall.}
+\label{fig:waterfall}
+\end{figure}
+
+\noindent\textbf{Key findings:} (1)~GPT-4o is the only meaningful drop; (2)~Janus-Pro (also autoregressive) transfers well --- the gap is GPT-4o-specific; (3)~diffusion-to-diffusion transfer is strong; (4)~CIFAKE-fit temperature worsens OOD ECE.
+
+% ══════════════════════════════════════════════════════════════
+\section{Experiment 4: GPT-4o Investigation}
+\label{sec:gpt4o}
+
+FFT radial spectra, t-SNE of 1536-D embeddings, and quantitative Grad-CAM (entropy, peak ratio, Gini) show that GPT-4o is spectrally and representationally closer to real images, while attention focus is not uniquely worse than well-detected families. The failure mode is \textbf{feature absence}.
+
+\begin{table}[H]
+\centering
+\caption{Grad-CAM attention metrics (FAKE images).}
+\label{tab:gcm}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Family} & \textbf{Entropy} & \textbf{Peak ratio} & \textbf{Gini} \\
+\midrule
+CIFAKE FAKE & \textbf{10.197} & \textbf{0.339} & \textbf{0.574} \\
+GPT-4o & 10.291 & 0.309 & 0.529 \\
+Janus-Pro & 10.355 & 0.295 & 0.498 \\
+Midjourney v6 & 10.376 & 0.282 & 0.478 \\
+SD3/Flux & 10.380 & 0.282 & 0.488 \\
+StyleGAN & 10.319 & 0.317 & 0.518 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{outputs/plots/gpt4o_investigation/radial_power_spectra.png}
+\caption{Radial power spectra by family.}
+\label{fig:fft}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{outputs/plots/gpt4o_investigation/feature_space_tsne.png}
+\caption{t-SNE of EfficientNet-B3 embeddings.}
+\label{fig:tsne}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════
+\section{Experiment 5: Resolution-Matched Control}
+\label{sec:control}
+
+Every REAL image in Experiment~3 is a $32\times32$ CIFAR upscale; every FAKE is a high-resolution downscale. Condition~A uses CIFAKE REAL (native); B uses high-res real photos (native); C forces the same high-res reals to $32\times32$; D forces generator fakes to $32\times32$. Pipeline: \texttt{src/analysis/resolution\_control.py}, notebook~\texttt{07}.
+
+\medskip
+\noindent\textit{Results status:} After running notebook~07 on Colab, insert FAKE-rates from \texttt{outputs/results/resolution\_control.json} and figures from \texttt{outputs/plots/resolution\_control/}. Interpretation: if B$\gg$A, resolution confound; if B$\approx$A, confound ruled out.
+
+\begin{figure}[H]
+\centering
+\IfFileExists{outputs/plots/resolution_control/fake_rate_by_condition.png}{%
+  \includegraphics[width=0.8\textwidth]{outputs/plots/resolution_control/fake_rate_by_condition.png}%
+}{%
+  \fbox{\parbox{0.8\textwidth}{\centering\vspace{2cm}Pending: run notebook 07\\(\texttt{fake\_rate\_by\_condition.png})\vspace{2cm}}}%
+}
+\caption{Resolution control --- FAKE prediction rate by condition.}
+\label{fig:control}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════
+\section{Experiment 6: Interactive Demo}
+
+A Gradio application (\texttt{app.py}) returns REAL/FAKE classification, temperature-scaled confidence, and a Grad-CAM overlay. Launch with \texttt{python app.py} or \texttt{python app.py --share}. Demo runbook: \texttt{reports/demo\_script.md}.
+
+% ══════════════════════════════════════════════════════════════
+\section{Discussion}
+
+\begin{table}[H]
+\centering
+\caption{Hypothesis assessment.}
+\label{tab:hyp}
+\begin{tabular}{p{7cm}p{5.5cm}}
+\toprule
+\textbf{Claim} & \textbf{Outcome} \\
+\midrule
+Detectors fail on newer generators in general & Refuted for four of five families \\
+Autoregressive generators are especially hard & Partially refuted (Janus-Pro easy; GPT-4o hard) \\
+Failure due to missing training artefacts & Supported for GPT-4o \\
+Calibration transfers under shift & Refuted \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Threats to validity:} real-reference protocol (mitigated by Experiment~5); $N=300$ per family; CIFAKE's $32\times32$ origin; single backbone; heterogeneous JPEG/domain pipelines across sources.
+
+% ══════════════════════════════════════════════════════════════
+\section{Limitations}
+
+Single-generator training; low native resolution; OOD calibration not re-fit; GPT-4o gap not reduced to a closed-form spectral rule; control numbers require Colab execution (code and tests are complete).
+
+% ══════════════════════════════════════════════════════════════
+\section{Conclusions and Future Work}
+
+\begin{enumerate}[noitemsep]
+    \item CIFAKE-trained EfficientNet-B3 reaches 96.96\% accuracy with near-perfect AUC and excellent pre-calibration ECE.
+    \item Transfer is strong for four of five families; only GPT-4o shows a clear gap.
+    \item The GPT-4o failure is best explained as feature absence.
+    \item In-distribution temperature scaling is not optimal under shift.
+    \item Resolution-matched controls are required when low-res benchmark reals are paired with high-res fakes.
+\end{enumerate}
+
+\noindent\textbf{Future work:} multi-generator training (e.g.\ GenImage), higher-resolution data, hybrid spatial--frequency features, ensembles, and per-deployment recalibration.
+
+% ══════════════════════════════════════════════════════════════
+\section{Reproducibility}
+
+Seed 42. \textbf{71} unit tests across 8 modules (\texttt{pytest tests/}). Setup guide: \texttt{docs/SETUP.md}. Source modules under \texttt{src/}. Notebooks \texttt{01}--\texttt{07}. License: MIT. Repository: \url{https://github.com/krishi-shah/ai-image-detection}.
+
+% ══════════════════════════════════════════════════════════════
+\section*{References}
+
+\begin{enumerate}[label={[\arabic*]}, noitemsep]
+    \item Bird, J.J.\ \& Lotfi, A.\ (2024). CIFAKE: Image Classification and Explainable Identification of AI-Generated Synthetic Images. \textit{IEEE Access}, 12, 15642--15650.
+    \item Corvi, R.\ et al.\ (2023). On the Detection of Synthetic Images Generated by Diffusion Models. \textit{ICASSP 2023}.
+    \item Gragnaniello, D.\ et al.\ (2021). Are GAN Generated Images Easy to Detect? A Critical Analysis of the State of the Art. \textit{ICME 2021}.
+    \item Guo, C.\ et al.\ (2017). On Calibration of Modern Neural Networks. \textit{ICML 2017}.
+    \item Rossler, A.\ et al.\ (2019). FaceForensics++: Learning to Detect Manipulated Facial Images. \textit{ICCV 2019}.
+    \item Selvaraju, R.\ et al.\ (2017). Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization. \textit{ICCV 2017}.
+    \item Wang, S.\ et al.\ (2020). CNN-Generated Images Are Surprisingly Easy to Spot\ldots For Now. \textit{CVPR 2020}.
+\end{enumerate}
+
+\end{document}

@@ -1,9 +1,7 @@
 \documentclass[12pt,a4paper]{article}
 
 % NOTE FOR OVERLEAF: If the .tex file is placed at project root (not inside reports/),
-% change all "outputs/" paths to "outputs/" using find-and-replace.
-% Also: heatmap filenames contain spaces and parentheses. If grffile doesn't help,
-% rename the uploaded files to remove spaces (e.g., FAKE_48_5.jpg).
+% change figure paths as needed. Heatmap filenames use underscores (no spaces).
 
 % ── Packages ──
 \usepackage[margin=2.5cm]{geometry}
@@ -110,9 +108,9 @@ The primary training and evaluation dataset is \textbf{CIFAKE} (Bird \& Lotfi, 2
 \toprule
 \textbf{Property} & \textbf{Detail} \\
 \midrule
-Total images       & 60,000 (balanced) \\
-Real images        & 30,000 (sourced from CIFAR-10) \\
-AI-generated       & 30,000 (Stable Diffusion v1.4) \\
+Total images       & 120,000 on disk (see note)\\
+Real images        & 60,000 (CIFAR-10 sourced; 50K train + 10K test) \\
+AI-generated       & 60,000 (Stable Diffusion v1.4; 50K train + 10K test) \\
 Resolution         & $32 \times 32$ pixels (upscaled to $224 \times 224$) \\
 Format             & RGB (3 channels) \\
 Classes            & FAKE (class 0), REAL (class 1) \\
@@ -120,6 +118,7 @@ Classes            & FAKE (class 0), REAL (class 1) \\
 \end{tabular}
 \end{table}
 
+\noindent\textit{Note:} The CIFAKE paper and Kaggle card often cite 60{,}000 images. The archive used in this project contains 100{,}000 training images (50K REAL + 50K FAKE) and 20{,}000 test images (10K + 10K), for 120{,}000 total. All experiments use these on-disk counts.
 The train/validation split is created by randomly splitting the CIFAKE training folder 80/20 with a fixed seed (42) for reproducibility. The test set is the separate CIFAKE test folder. All three splits are balanced at approximately 50\% FAKE / 50\% REAL, as shown in Table~\ref{tab:splits}.
 
 \begin{table}[H]
@@ -172,7 +171,7 @@ The temperature is initialised at 1.5 and optimised for up to 50 L-BFGS iteratio
 
 \subsection{Visual Explainability}
 
-\textbf{Grad-CAM} (Selvaraju et al., 2017) is integrated using the \texttt{pytorch-grad-cam} library. The target layer is the last convolutional block of EfficientNet-B3 (\texttt{model.blocks[-1]}), which provides the highest-level spatial features before the classifier head.
+\textbf{Grad-CAM} (Selvaraju et al., 2017) is integrated using the \texttt{pytorch-grad-cam} library. The target layer is the final convolutional head of EfficientNet-B3 (\texttt{model.conv\_head}), which provides the highest-level spatial features before the classifier.
 
 % ══════════════════════════════════════════════════════════════
 \section{Training Setup and Preprocessing}
@@ -204,7 +203,7 @@ Random seed         & 42 \\
 
 \subsection{Train/Validation/Test Split}
 
-The CIFAKE training set (60,000 images) is split 80/20 into train and validation sets using a fixed random seed (42) for reproducibility. The CIFAKE test folder (20,000 images) is used as the held-out test set. The resulting split:
+The CIFAKE training folder (100,000 images) is split 80/20 into train and validation sets using a fixed random seed (42) for reproducibility. The CIFAKE test folder (20,000 images) is used as the held-out test set. The resulting split:
 \begin{itemize}[noitemsep]
     \item \textbf{Train:} 80,000 images (39,962 FAKE, 40,038 REAL)
     \item \textbf{Validation:} 20,000 images (10,038 FAKE, 9,962 REAL)
@@ -518,29 +517,29 @@ Figures~\ref{fig:heatmaps_fake} and~\ref{fig:heatmaps_real} show individual Grad
 \begin{figure}[H]
 \centering
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_48 (5).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_48_5.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
     \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_516.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_518 (3).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_518_3.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_52 (10).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_52_10.jpg}
 \end{subfigure}
 
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_636 (3).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_636_3.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_755 (2).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_755_2.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_870 (8).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_870_8.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_95 (8).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/FAKE_95_8.jpg}
 \end{subfigure}
 \caption{Individual Grad-CAM heatmaps for FAKE images --- localised attention on generation artefacts.}
 \label{fig:heatmaps_fake}
@@ -549,29 +548,29 @@ Figures~\ref{fig:heatmaps_fake} and~\ref{fig:heatmaps_real} show individual Grad
 \begin{figure}[H]
 \centering
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0066 (7).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0066_7.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0090 (7).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0090_7.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0124 (10).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0124_10.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0233 (9).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0233_9.jpg}
 \end{subfigure}
 
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0389 (6).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0389_6.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0504 (5).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0504_5.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0934 (8).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0934_8.jpg}
 \end{subfigure}
 \begin{subfigure}[b]{0.24\textwidth}
-    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0998 (9).jpg}
+    \includegraphics[width=\textwidth]{outputs/heatmaps/REAL_0998_9.jpg}
 \end{subfigure}
 \caption{Individual Grad-CAM heatmaps for REAL images --- diffuse attention across natural textures.}
 \label{fig:heatmaps_real}
@@ -763,7 +762,7 @@ This rules out the hypothesis that the model ``does not know where to look'' on 
     \item Conducted literature review covering CNN-based detection methods (Wang et al., 2020; Bird \& Lotfi, 2024), generative model evolution (Corvi et al., 2023; Gragnaniello et al., 2021), explainability via Grad-CAM (Selvaraju et al., 2017), and calibration techniques (Guo et al., 2017).
     \item Identified research gap: no prior work combines cross-generator evaluation, calibration analysis, and Grad-CAM comparison across generator families.
     \item Set up GitHub repository and Google Colab environment.
-    \item Downloaded and preprocessed CIFAKE dataset (60,000 images, balanced binary classification).
+    \item Downloaded and preprocessed CIFAKE dataset (120,000 images on disk: 100K train + 20K test).
     \item Defined evaluation metrics: Accuracy, AUC-ROC, Expected Calibration Error (ECE).
     \item Prepared background summary and preliminary project specification.
 \end{itemize}
@@ -786,7 +785,7 @@ This rules out the hypothesis that the model ``does not know where to look'' on 
     \item Refined calibration analysis using Expected Calibration Error (ECE) and reliability diagrams, showing the model was already well-calibrated (ECE = 0.0026) before temperature scaling.
     \item Conducted threshold sensitivity analysis across 7 thresholds (0.40--0.70), confirming model robustness.
     \item Analysed misclassified FAKE images, identifying that failures correlate with reduced generation artefacts.
-    \item Ensured evaluation pipeline is stable and reproducible (26 unit tests passing, fixed random seed 42).
+    \item Ensured evaluation pipeline is stable and reproducible (71 unit tests across 8 modules, fixed random seed 42).
 \end{itemize}
 
 \subsection{Milestone 4: Generalisation Study and GPT-4o Investigation (July 6 -- July 20)}
@@ -878,7 +877,7 @@ All code, notebooks, tests, and results are available at:\\
 \end{itemize}
 
 \subsection*{Tests}
-26 unit tests across 5 test modules, all passing --- covering model architecture, data transforms, evaluation metrics, calibration, and Grad-CAM.
+71 unit tests across 8 test modules, all passing --- covering model architecture, data transforms, evaluation metrics, calibration, Grad-CAM, generalisation, Gradio demo, and resolution control.
 
 % ══════════════════════════════════════════════════════════════
 \section*{References}
