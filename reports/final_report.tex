@@ -62,7 +62,7 @@
 % ══════════════════════════════════════════════════════════════
 \section{Abstract}
 
-AI-image detectors trained on older generative models may fail as newer architectures close the perceptual gap with real photographs. This project fine-tunes an EfficientNet-B3 on CIFAKE (Stable Diffusion v1.4), adds temperature scaling and Grad-CAM explainability, and evaluates transfer to StyleGAN, SD3/Flux, Midjourney~v6, GPT-4o, and Janus-Pro. In-distribution performance is strong (96.96\% accuracy, AUC 0.9971, ECE 0.0026). Cross-generator transfer is surprisingly robust for four of five families (94--97\% fake detection). Only GPT-4o shows a meaningful gap (86.3\% fake detection). Frequency analysis, t-SNE embeddings, and quantitative Grad-CAM indicate a \textbf{feature-absence} failure on GPT-4o rather than an attention failure. A resolution-matched control tests whether high transfer was confounded by pairing high-resolution fakes with low-resolution CIFAKE reals. The original chronological generalisation-gap hypothesis is refined: the gap is GPT-4o-specific, not universal across newer generators.
+AI-image detectors trained on older generative models may fail as newer architectures close the perceptual gap with real photographs. This project fine-tunes an EfficientNet-B3 on CIFAKE (Stable Diffusion v1.4), adds temperature scaling and Grad-CAM explainability, and evaluates transfer to StyleGAN, SD3/Flux, Midjourney~v6, GPT-4o, and Janus-Pro. In-distribution performance is strong (96.96\% accuracy, AUC 0.9971, ECE 0.0026). Under a naive protocol pairing high-resolution generator fakes with low-resolution CIFAKE reals, transfer appears robust (94--97\% fake detection) except for GPT-4o (86.3\%). A resolution-matched control overturns that picture: \textbf{93\% of high-resolution real photographs are predicted FAKE}, and forcing generator fakes to $32\times32$ collapses detection to roughly 35--62\%. The apparent Experiment~3 transfer was largely a \textbf{resolution confound}. Frequency analysis, t-SNE, and Grad-CAM still support a GPT-4o feature-absence story under the native protocol, but the primary methodological finding is that CIFAKE-trained detectors must not be evaluated against high-res fakes without matched-resolution real controls.
 
 % ══════════════════════════════════════════════════════════════
 \section{Introduction and Motivation}
@@ -239,7 +239,7 @@ StyleGAN & 0.9617 & 0.9400 & 0.9945 & 0.0342 & 0.0514 & 0.8\% \\
 \label{fig:waterfall}
 \end{figure}
 
-\noindent\textbf{Key findings:} (1)~GPT-4o is the only meaningful drop; (2)~Janus-Pro (also autoregressive) transfers well --- the gap is GPT-4o-specific; (3)~diffusion-to-diffusion transfer is strong; (4)~CIFAKE-fit temperature worsens OOD ECE.
+\noindent\textbf{Key findings (naive protocol):} (1)~GPT-4o is the only meaningful drop; (2)~Janus-Pro (also autoregressive) transfers well; (3)~diffusion-to-diffusion transfer looks strong; (4)~CIFAKE-fit temperature worsens OOD ECE. \textbf{Caveat:} Experiment~5 shows these transfer rates are inflated by resolution mismatch --- treat this section as the naive protocol result.
 
 % ══════════════════════════════════════════════════════════════
 \section{Experiment 4: GPT-4o Investigation}
@@ -283,20 +283,67 @@ StyleGAN & 10.319 & 0.317 & 0.518 \\
 \section{Experiment 5: Resolution-Matched Control}
 \label{sec:control}
 
-Every REAL image in Experiment~3 is a $32\times32$ CIFAR upscale; every FAKE is a high-resolution downscale. Condition~A uses CIFAKE REAL (native); B uses high-res real photos (native); C forces the same high-res reals to $32\times32$; D forces generator fakes to $32\times32$. Pipeline: \texttt{src/analysis/resolution\_control.py}, notebook~\texttt{07}.
+Every REAL image in Experiment~3 is a $32\times32$ CIFAR upscale; every FAKE is a high-resolution downscale. Condition~A uses CIFAKE REAL (native); B uses high-res real photos (native); C forces the same high-res reals to $32\times32$; D forces generator fakes to $32\times32$. Pipeline: \texttt{src/analysis/resolution\_control.py}, notebook~\texttt{07}. $N=300$ per condition; $T=1.2189$.
 
-\medskip
-\noindent\textit{Results status:} After running notebook~07 on Colab, insert FAKE-rates from \texttt{outputs/results/resolution\_control.json} and figures from \texttt{outputs/plots/resolution\_control/}. Interpretation: if B$\gg$A, resolution confound; if B$\approx$A, confound ruled out.
+\begin{table}[H]
+\centering
+\caption{Resolution-control FAKE prediction rates.}
+\label{tab:control}
+\small
+\begin{tabular}{llccc}
+\toprule
+\textbf{Condition} & \textbf{True} & \textbf{FAKE-rate} & \textbf{Mean $P$(FAKE)} & \textbf{Median} \\
+\midrule
+A: CIFAKE REAL (native) & REAL & \textbf{1.7\%} & 0.0318 & 0.0004 \\
+B: Hi-res REAL (native) & REAL & \textbf{93.0\%} & 0.8203 & 0.8839 \\
+C: Hi-res REAL ($\to$32$\times$32) & REAL & \textbf{37.3\%} & 0.3979 & 0.3134 \\
+D: GPT-4o FAKE ($\to$32$\times$32) & FAKE & 53.7\% & 0.5270 & 0.5287 \\
+D: Janus-Pro FAKE ($\to$32$\times$32) & FAKE & 47.3\% & 0.4902 & 0.4782 \\
+D: Midjourney v6 FAKE ($\to$32$\times$32) & FAKE & 34.7\% & 0.3972 & 0.3485 \\
+D: SD3/Flux FAKE ($\to$32$\times$32) & FAKE & 62.3\% & 0.5950 & 0.6243 \\
+D: StyleGAN FAKE ($\to$32$\times$32) & FAKE & 38.3\% & 0.4116 & 0.3591 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Generator fake detection: native vs resolution-matched.}
+\label{tab:control_ba}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Family} & \textbf{Native} & \textbf{Matched ($\to$32$\times$32)} \\
+\midrule
+GPT-4o & 86.3\% & 53.7\% \\
+Janus-Pro & 94.0\% & 47.3\% \\
+Midjourney v6 & 94.0\% & 34.7\% \\
+SD3/Flux & 97.0\% & 62.3\% \\
+StyleGAN & 94.0\% & 38.3\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Interpretation:} Resolution confound \emph{confirmed}. High-resolution real photographs are predicted FAKE 93\% of the time (B) versus 1.7\% for CIFAKE reals (A). Forcing the same photos to $32\times32$ (C) drops the rate to 37.3\%. Generator fake detection also collapses under matching. Experiment~3 transfer numbers were inflated by the resolution mismatch.
 
 \begin{figure}[H]
 \centering
-\IfFileExists{outputs/plots/resolution_control/fake_rate_by_condition.png}{%
-  \includegraphics[width=0.8\textwidth]{outputs/plots/resolution_control/fake_rate_by_condition.png}%
-}{%
-  \fbox{\parbox{0.8\textwidth}{\centering\vspace{2cm}Pending: run notebook 07\\(\texttt{fake\_rate\_by\_condition.png})\vspace{2cm}}}%
-}
+\includegraphics[width=0.8\textwidth]{outputs/plots/resolution_control/fake_rate_by_condition.png}
 \caption{Resolution control --- FAKE prediction rate by condition.}
 \label{fig:control}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{outputs/plots/resolution_control/before_after_resolution_matching.png}
+\caption{Per-family fake detection: native vs resolution-matched.}
+\label{fig:control_ba}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{outputs/plots/resolution_control/p_fake_distributions.png}
+\caption{$P$(FAKE) distributions for real-image conditions A--C.}
+\label{fig:control_dist}
 \end{figure}
 
 % ══════════════════════════════════════════════════════════════
@@ -315,33 +362,34 @@ A Gradio application (\texttt{app.py}) returns REAL/FAKE classification, tempera
 \toprule
 \textbf{Claim} & \textbf{Outcome} \\
 \midrule
-Detectors fail on newer generators in general & Refuted for four of five families \\
-Autoregressive generators are especially hard & Partially refuted (Janus-Pro easy; GPT-4o hard) \\
-Failure due to missing training artefacts & Supported for GPT-4o \\
+Detectors fail on newer generators in general & Supported after resolution matching; Experiment~3 transfer was resolution-driven \\
+Autoregressive generators are especially hard & Partially supported (GPT-4o hardest natively; Midjourney/StyleGAN collapse when matched) \\
+Failure due to missing training artefacts & Supported for GPT-4o; resolution/resampling cues also dominate the naive protocol \\
 Calibration transfers under shift & Refuted \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\noindent\textbf{Threats to validity:} real-reference protocol (mitigated by Experiment~5); $N=300$ per family; CIFAKE's $32\times32$ origin; single backbone; heterogeneous JPEG/domain pipelines across sources.
+\noindent The primary finding is that a CIFAKE-trained detector uses resolution/resampling as a class cue. Once that confound is removed, generalisation collapses across families.
 
 % ══════════════════════════════════════════════════════════════
 \section{Limitations}
 
-Single-generator training; low native resolution; OOD calibration not re-fit; GPT-4o gap not reduced to a closed-form spectral rule; control numbers require Colab execution (code and tests are complete).
+Single-generator $32\times32$ training; Experiment~3 overall accuracy is not a valid OOD metric under CIFAKE-real pairing; OOD calibration not re-fit; force-$32\times32$ matching is a strong intervention with residual domain shift; GPT-4o spectral story alone does not explain matched-resolution collapse on Midjourney/StyleGAN.
 
 % ══════════════════════════════════════════════════════════════
 \section{Conclusions and Future Work}
 
 \begin{enumerate}[noitemsep]
-    \item CIFAKE-trained EfficientNet-B3 reaches 96.96\% accuracy with near-perfect AUC and excellent pre-calibration ECE.
-    \item Transfer is strong for four of five families; only GPT-4o shows a clear gap.
-    \item The GPT-4o failure is best explained as feature absence.
+    \item CIFAKE-trained EfficientNet-B3 reaches 96.96\% accuracy in-distribution with near-perfect AUC and excellent pre-calibration ECE.
+    \item Under the \emph{naive} cross-generator protocol, transfer looked strong except for GPT-4o --- but Experiment~5 shows those numbers were resolution-confounded (93\% of high-res reals called FAKE).
+    \item After resolution matching, fake detection falls to roughly 35--62\% across families --- a broad generalisation gap.
+    \item GPT-4o remains a hard case under the native protocol; FFT/t-SNE/Grad-CAM support feature absence.
     \item In-distribution temperature scaling is not optimal under shift.
-    \item Resolution-matched controls are required when low-res benchmark reals are paired with high-res fakes.
+    \item Low-resolution benchmarks must not be evaluated against high-res fakes paired with low-res reals without a resolution-matched control.
 \end{enumerate}
 
-\noindent\textbf{Future work:} multi-generator training (e.g.\ GenImage), higher-resolution data, hybrid spatial--frequency features, ensembles, and per-deployment recalibration.
+\noindent\textbf{Future work:} multi-generator higher-resolution training (e.g.\ GenImage), matched-resolution evaluation, hybrid spatial--frequency features, ensembles, and per-deployment recalibration.
 
 % ══════════════════════════════════════════════════════════════
 \section{Reproducibility}

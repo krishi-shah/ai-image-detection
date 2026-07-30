@@ -64,11 +64,11 @@ Point at the confidence / tier UI.
 
 **Say:** “Temperature scaling was fit on CIFAKE (T=1.2189). Under distribution shift, ECE got worse — calibration does not transfer. Treat out-of-distribution confidence as a soft signal, not a calibrated probability.”
 
-### Beat 7 — Control experiment (optional, 45s)
+### Beat 7 — Control experiment (~45s)
 
-If notebook 07 results are available, show the FAKE-rate bar chart from `outputs/plots/resolution_control/`.
+Show the FAKE-rate bar chart from `outputs/plots/resolution_control/fake_rate_by_condition.png`.
 
-**Say:** “We also checked whether high accuracy was just a resolution confound — CIFAKE reals are 32×32 upscales while generator images are high-res downscales. The control compares high-res real photos through the same pipeline.”
+**Say:** “We checked whether high accuracy was just a resolution confound. CIFAKE reals are 32×32 upscales; generator images are high-res downscales. High-res real photos are called FAKE 93% of the time. After forcing everything to 32×32, fake detection collapses to roughly 35–62%. The strong cross-generator numbers were largely resolution-driven.”
 
 ---
 
@@ -76,7 +76,7 @@ If notebook 07 results are available, show the FAKE-rate bar chart from `outputs
 
 ### “Isn’t your generalisation accuracy inflated by CIFAKE reals?”
 
-Yes — every family was scored as 300 generator fakes + 300 CIFAKE reals. The honest OOD metric is **fake detection rate**, not overall accuracy. That is why the report leads with fake detection rate (GPT-4o 86.3%, others 94–97%). The resolution-control experiment tests the remaining confound.
+Yes — and Experiment 5 proved it. Every family was scored as 300 generator fakes + 300 CIFAKE reals. Worse: 93% of high-resolution *real* photos are predicted FAKE under the native pipeline. After forcing images to 32×32, fake detection falls to ~35–62%. The honest story is a resolution confound plus a residual generalisation gap; fake detection rate under matching is the metric to cite.
 
 ### “Why did ECE rise after temperature scaling?”
 
@@ -88,7 +88,7 @@ Within sampling noise / domain similarity: SD3/Flux still produces diffusion-lik
 
 ### “Did you prove the generalisation gap?”
 
-Partially. The strong chronological gap hypothesis was **refuted** for StyleGAN, Midjourney, SD3/Flux, and Janus-Pro. A **GPT-4o-specific** gap remains (≈4.6 accuracy points / ≈9-point fake-detection drop vs CIFAKE FAKE recall). The contribution is measuring where transfer holds and diagnosing why GPT-4o fails.
+Yes, after correcting the protocol. The naive Experiment 3 numbers looked like “only GPT-4o fails.” Experiment 5 shows those numbers were resolution-confounded. Matched-resolution evaluation reveals a broad gap. GPT-4o’s feature-absence analysis remains a useful native-protocol diagnosis.
 
 ### “What is the Grad-CAM target layer?”
 

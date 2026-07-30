@@ -38,11 +38,12 @@ This project investigates the **generalisation gap** in AI-generated image detec
 
 ### Key Findings
 
-- In-distribution performance is near-perfect, but the **chronological generalisation-gap hypothesis is refined**, not confirmed wholesale.
-- Four of five generator families transfer well (94–97% fake detection). **Only GPT-4o** shows a meaningful drop (86.3% fake detection).
-- Grad-CAM, FFT, and t-SNE indicate a **feature-absence** problem on GPT-4o — not a unique attention failure.
+- In-distribution performance is near-perfect (96.96%, AUC 0.9971).
+- Under the **naive** cross-generator protocol, four of five families look strong (94–97% fake detection); GPT-4o drops to 86.3%.
+- A resolution-matched control **confirms a confound**: 93% of high-resolution real photos are predicted FAKE; forcing fakes to 32×32 collapses detection to ~35–62%.
+- Apparent Experiment 3 transfer was largely resolution-driven; after matching, a broad generalisation gap appears.
+- Grad-CAM / FFT / t-SNE still support a GPT-4o **feature-absence** story under the native protocol.
 - Temperature scaling fitted on CIFAKE **worsens ECE** under distribution shift.
-- A resolution-matched control (notebook 07) tests whether pairing high-res fakes with low-res CIFAKE reals confounded Experiment 3.
 
 ---
 

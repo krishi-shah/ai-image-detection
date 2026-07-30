@@ -139,9 +139,10 @@ def build():
     add_bullet_slide(
         prs, "Hypothesis Revised",
         [
-            "Universal chronological gap: REFUTED for 4/5 families.",
-            "Autoregressive = hard: PARTLY REFUTED (Janus-Pro easy).",
-            "GPT-4o-specific feature-absence gap: SUPPORTED.",
+            "Naive protocol: transfer looks strong except GPT-4o.",
+            "Control: 93% of high-res reals called FAKE → confound.",
+            "After matching: broad gap (fake detection ~35–62%).",
+            "GPT-4o feature-absence remains a secondary native-protocol finding.",
         ],
         PLOTS / "degradation_waterfall.png",
     )
@@ -160,12 +161,13 @@ def build():
 
     ctrl = PLOTS / "resolution_control" / "fake_rate_by_condition.png"
     add_bullet_slide(
-        prs, "Resolution Control",
+        prs, "Resolution Control — Confound Confirmed",
         [
-            "Do high-res reals get called FAKE under the same pipeline?",
-            "A: CIFAKE real · B: hi-res real · C: hi-res→32 · D: fakes→32.",
-            "If B ≫ A → confound; if B ≈ A → transfer is genuine.",
-            "Run notebook 07; figure embeds when present.",
+            "A CIFAKE REAL: 1.7% predicted FAKE.",
+            "B Hi-res REAL: 93.0% predicted FAKE — not generator detection.",
+            "C Same photos →32×32: FAKE-rate falls to 37.3%.",
+            "Matched fakes collapse: Midjourney 94%→35%, StyleGAN 94%→38%.",
+            "Experiment 3 transfer was largely resolution-driven.",
         ],
         ctrl if ctrl.exists() else None,
     )
@@ -184,10 +186,11 @@ def build():
     ])
 
     add_bullet_slide(prs, "Conclusions", [
-        "Strong CIFAKE detector (96.96%, AUC 0.9971).",
-        "Broad transfer — except GPT-4o (feature absence).",
-        "Calibration does not transfer under shift.",
-        "Resolution controls are essential for this evaluation protocol.",
+        "Strong CIFAKE detector in-distribution (96.96%, AUC 0.9971).",
+        "Naive cross-generator transfer was resolution-confounded.",
+        "Matched-resolution eval reveals a broad generalisation gap.",
+        "GPT-4o: feature absence under native protocol (FFT / t-SNE / Grad-CAM).",
+        "Low-res benchmarks need matched-resolution real controls.",
         "Code, tests (71), report, demo: github.com/krishi-shah/ai-image-detection",
     ])
 

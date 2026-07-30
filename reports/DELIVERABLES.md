@@ -30,5 +30,5 @@ Maps each EECS 4080 contract deliverable to the concrete artifact in this reposi
 - [ ] `reports/presentation.pptx` opens and embeds key figures
 - [ ] `python app.py` runs locally with checkpoint
 - [ ] `pytest tests/` — all green
-- [ ] Drive `outputs/` (Milestone 4 plots/JSONs) copied into the local repo if not already present
-- [ ] Notebook 07 run on Colab; `resolution_control.json` + plots committed or submitted
+- [x] Drive `outputs/` (Milestone 4 plots/JSONs) copied into the local repo if not already present
+- [x] Notebook 07 run on Colab; `resolution_control.json` + plots committed or submitted
