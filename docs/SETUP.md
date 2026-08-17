@@ -85,13 +85,10 @@ Temperature and baseline metrics live in `outputs/results/baseline_results.json`
 | `04_gradcam.ipynb` | Grad-CAM heatmaps |
 | `05_generalisation_eval.ipynb` | Cross-generator evaluation |
 | `06_gpt4o_investigation.ipynb` | FFT, t-SNE, Grad-CAM metrics |
-| `06_gpt4o_investigation.ipynb` | FFT, t-SNE, Grad-CAM metrics |
 
 ### Generalisation data (notebooks 05–06)
 
-```bash
-python scripts/download_generalisation_data.py --output-dir data/generalisation --per-generator 300
-```
+Place evaluation images under `data/generalisation/` (300 images per family: StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, Janus-Pro). HuggingFace sources and sampling details are in notebooks `05` and `06`.
 
 ---
 
@@ -104,7 +101,7 @@ python app.py --share         # public gradio.live URL (Colab-friendly)
 
 Requires the checkpoint and `baseline_results.json`. If the checkpoint is missing, the app starts and shows setup instructions instead of crashing.
 
-Demo samples: `data/demo_samples/`.
+Demo samples: `data/demo_samples/`. A screen recording of the UI is in [`assets/demo.mp4`](../assets/demo.mp4).
 
 ---
 
@@ -124,20 +121,3 @@ All tests should pass (63 across 7 modules).
 ### Troubleshooting: `ModuleNotFoundError: No module named 'mlcheck'`
 
 A stray `mlcheck` pytest plugin on some machines auto-loads and crashes collection. Setting `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` disables plugin auto-discovery and fixes this.
-
----
-
-## 8. Presentation rebuild
-
-```bash
-pip install python-pptx
-python scripts/build_presentation.py
-```
-
-Writes `reports/presentation.pptx` (13 slides, speaker notes). Spoken lines: `reports/talk_script.md`. Q&A: `reports/qa_prep.md`.
-
----
-
-## 9. Final report PDF
-
-Open `reports/final_report.tex` in Overleaf (or a local TeX install) with the `outputs/` figure tree available relative to the project root.
