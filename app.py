@@ -30,10 +30,13 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pytorch_grad_cam
 PROJECT_ROOT = Path(__file__).resolve().parent
 CHECKPOINT_PATH = PROJECT_ROOT / "outputs" / "checkpoints" / "best_detector.pth"
 BASELINE_PATH = PROJECT_ROOT / "outputs" / "results" / "baseline_results.json"
+DEMO_SAMPLES_DIR = PROJECT_ROOT / "data" / "demo_samples"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LABEL_MAP = {0: "AI-Generated (FAKE)", 1: "Authentic (REAL)"}
 TRANSFORM = get_transforms("test")
+DISPLAY_MAX = 512
+DISPLAY_MIN = 224
 
 MODEL = None
 MODEL_LOADED = False
@@ -55,6 +58,25 @@ except Exception as e:
     MODEL_LOADED = False
 
 
+EXAMPLE_SPECS = [
+    ("01_cifake_real.jpg", "CIFAKE Real"),
+    ("02_cifake_fake.jpg", "CIFAKE Fake"),
+    ("03_stylegan.png", "StyleGAN"),
+    ("04_midjourney.png", "Midjourney"),
+    ("05_gpt4o.png", "GPT-4o"),
+]
+
+
+def get_labeled_examples() -> list[tuple[str, str]]:
+    """Return (path, label) pairs for demo samples that exist on disk."""
+    pairs = []
+    for filename, label in EXAMPLE_SPECS:
+        path = DEMO_SAMPLES_DIR / filename
+        if path.exists():
+            pairs.append((str(path), label))
+    return pairs
+
+
 # ---------------------------------------------------------------------------
 # Theme
 # ---------------------------------------------------------------------------
@@ -64,55 +86,57 @@ class DetectorTheme(gr.themes.Soft):
         super().__init__(
             primary_hue=gr.themes.colors.indigo,
             secondary_hue=gr.themes.colors.purple,
-            neutral_hue=gr.themes.colors.gray,
+            neutral_hue=gr.themes.colors.slate,
             text_size=gr.themes.sizes.text_lg,
-            spacing_size=gr.themes.sizes.spacing_lg,
+            spacing_size=gr.themes.sizes.spacing_md,
             radius_size=gr.themes.sizes.radius_lg,
             font=gr.themes.GoogleFont("Inter"),
             font_mono=gr.themes.GoogleFont("JetBrains Mono"),
         )
+        dark = "#0b1020"
+        panel = "#12182b"
         self.set(
-            body_background_fill="#f9fafb",
-            body_background_fill_dark="#f9fafb",
-            block_background_fill="white",
-            block_background_fill_dark="white",
+            body_background_fill=dark,
+            body_background_fill_dark=dark,
+            block_background_fill=panel,
+            block_background_fill_dark=panel,
             block_border_width="1px",
-            block_border_color="#e5e7eb",
-            block_border_color_dark="#e5e7eb",
-            block_shadow="0 2px 6px rgba(0,0,0,0.06)",
-            block_shadow_dark="0 2px 6px rgba(0,0,0,0.06)",
-            block_radius="14px",
-            block_label_text_size="*text_md",
-            block_label_text_color="*neutral_700",
-            block_label_text_color_dark="*neutral_700",
-            block_title_text_color="*neutral_800",
-            block_title_text_color_dark="*neutral_800",
-            body_text_color="*neutral_800",
-            body_text_color_dark="*neutral_800",
-            body_text_color_subdued="*neutral_500",
-            body_text_color_subdued_dark="*neutral_500",
-            background_fill_primary="white",
-            background_fill_primary_dark="white",
-            background_fill_secondary="#f3f4f6",
-            background_fill_secondary_dark="#f3f4f6",
-            border_color_primary="#e5e7eb",
-            border_color_primary_dark="#e5e7eb",
-            color_accent_soft="*primary_50",
-            color_accent_soft_dark="*primary_50",
+            block_border_color="#1e293b",
+            block_border_color_dark="#1e293b",
+            block_shadow="0 8px 32px rgba(0,0,0,0.35)",
+            block_shadow_dark="0 8px 32px rgba(0,0,0,0.35)",
+            block_radius="16px",
+            block_label_text_size="*text_sm",
+            block_label_text_color="#94a3b8",
+            block_label_text_color_dark="#94a3b8",
+            block_title_text_color="#e2e8f0",
+            block_title_text_color_dark="#e2e8f0",
+            body_text_color="#e2e8f0",
+            body_text_color_dark="#e2e8f0",
+            body_text_color_subdued="#94a3b8",
+            body_text_color_subdued_dark="#94a3b8",
+            background_fill_primary=panel,
+            background_fill_primary_dark=panel,
+            background_fill_secondary="#0f1629",
+            background_fill_secondary_dark="#0f1629",
+            border_color_primary="#1e293b",
+            border_color_primary_dark="#1e293b",
+            color_accent_soft="#1e1b4b",
+            color_accent_soft_dark="#1e1b4b",
             button_primary_background_fill="linear-gradient(135deg, #4f46e5, #7c3aed)",
-            button_primary_background_fill_hover="linear-gradient(135deg, #4338ca, #6d28d9)",
+            button_primary_background_fill_hover="linear-gradient(135deg, #6366f1, #8b5cf6)",
             button_primary_background_fill_dark="linear-gradient(135deg, #4f46e5, #7c3aed)",
-            button_primary_background_fill_hover_dark="linear-gradient(135deg, #4338ca, #6d28d9)",
+            button_primary_background_fill_hover_dark="linear-gradient(135deg, #6366f1, #8b5cf6)",
             button_primary_text_color="white",
             button_primary_text_color_dark="white",
             button_primary_border_color="transparent",
-            button_primary_shadow="0 4px 12px rgba(79,70,229,0.35)",
+            button_primary_shadow="0 4px 18px rgba(79,70,229,0.45)",
             button_large_text_size="*text_lg",
             button_large_padding="14px 28px",
-            input_background_fill="white",
-            input_background_fill_dark="white",
-            input_border_color="#d1d5db",
-            input_border_color_dark="#d1d5db",
+            input_background_fill="#0f1629",
+            input_background_fill_dark="#0f1629",
+            input_border_color="#334155",
+            input_border_color_dark="#334155",
             input_border_width="1.5px",
             input_radius="12px",
         )
@@ -120,151 +144,178 @@ class DetectorTheme(gr.themes.Soft):
 
 CUSTOM_CSS = """
 .gradio-container {
-    max-width: 100% !important;
-    padding: 20px 40px !important;
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 16px 24px 32px !important;
+    background: #0b1020 !important;
+}
+.header-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+.header-kicker {
+    font-size: 0.75em;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #818cf8;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.header-title {
+    font-size: 2.05em;
+    font-weight: 700;
+    color: #f8fafc;
+    margin: 0;
+    line-height: 1.15;
+}
+.header-sub {
+    color: #94a3b8;
+    margin-top: 6px;
+    font-size: 0.98em;
+}
+.stat-strip {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.stat-pill {
+    background: #12182b;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-width: 140px;
+}
+.stat-pill .num {
+    font-size: 1.25em;
+    font-weight: 700;
+    color: #a5b4fc;
+}
+.stat-pill .lbl {
+    font-size: 0.72em;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 2px;
 }
 .verdict-fake {
-    background: linear-gradient(135deg, #fef2f2, #fee2e2);
-    border-left: 6px solid #dc2626;
-    padding: 24px;
+    background: linear-gradient(135deg, #3f1219, #1a0b10);
+    border: 1px solid #7f1d1d;
+    border-left: 6px solid #ef4444;
+    padding: 20px 22px;
     border-radius: 14px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 .verdict-real {
-    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-    border-left: 6px solid #16a34a;
-    padding: 24px;
+    background: linear-gradient(135deg, #052e1c, #0b1020);
+    border: 1px solid #14532d;
+    border-left: 6px solid #22c55e;
+    padding: 20px 22px;
     border-radius: 14px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 .verdict-title {
-    font-size: 1.8em;
+    font-size: 2em;
     font-weight: 700;
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
+    color: #f8fafc;
 }
 .verdict-subtitle {
-    color: #64748b;
-    font-size: 1.1em;
+    color: #cbd5e1;
+    font-size: 1.05em;
 }
-.conf-bar-wrap {
-    margin: 20px 0 12px;
-}
+.conf-bar-wrap { margin: 16px 0 10px; }
 .conf-bar {
     display: flex;
-    height: 40px;
-    border-radius: 12px;
+    height: 36px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-    font-size: 15px;
+    background: #0f1629;
+    font-size: 14px;
     font-weight: 700;
-    line-height: 40px;
+    line-height: 36px;
 }
 .conf-fake {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
     color: white;
     text-align: center;
 }
 .conf-real {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
+    background: linear-gradient(135deg, #22c55e, #15803d);
     color: white;
     text-align: center;
 }
 .conf-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
-    color: #94a3b8;
+    font-size: 12px;
+    color: #64748b;
     margin-top: 6px;
-    padding: 0 4px;
+}
+.low-conf-note, .info-note {
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-top: 12px;
+    font-size: 0.92em;
 }
 .low-conf-note {
-    background: linear-gradient(135deg, #fffbeb, #fef3c7);
-    border-left: 5px solid #d97706;
-    padding: 14px 18px;
-    border-radius: 12px;
-    margin-top: 16px;
-    font-size: 1em;
-    color: #92400e;
+    background: #1c1408;
+    border-left: 4px solid #d97706;
+    color: #fde68a;
+}
+.info-note {
+    background: #111827;
+    border: 1px solid #1e293b;
+    color: #94a3b8;
 }
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
-    margin: 18px 0;
+    gap: 10px;
+    margin: 14px 0;
 }
 .stat-card {
     text-align: center;
-    padding: 18px 10px;
+    padding: 14px 8px;
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    background: linear-gradient(180deg, #ffffff, #f8fafc);
+    border: 1px solid #1e293b;
+    background: #0f1629;
 }
-.stat-val {
-    font-size: 1.7em;
-    font-weight: 700;
-}
+.stat-val { font-size: 1.45em; font-weight: 700; }
 .stat-lbl {
-    font-size: 0.82em;
-    color: #94a3b8;
+    font-size: 0.72em;
+    color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-top: 4px;
 }
 .attention-tag {
     display: inline-block;
-    padding: 8px 18px;
-    border-radius: 24px;
-    font-size: 1em;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 0.92em;
     font-weight: 600;
 }
-.att-focused { background: #dcfce7; color: #166534; }
-.att-moderate { background: #fef3c7; color: #92400e; }
-.att-diffuse { background: #fee2e2; color: #991b1b; }
-.info-note {
-    margin-top: 16px;
-    padding: 14px 18px;
-    background: #f1f5f9;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    font-size: 0.92em;
-    color: #64748b;
-}
-.pipeline-bar {
-    display: flex;
-    gap: 0;
-    margin: 0 0 20px 0;
-    border-radius: 14px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    background: white;
-}
-.pipeline-step {
-    flex: 1;
+.att-focused { background: #14532d; color: #bbf7d0; }
+.att-moderate { background: #78350f; color: #fde68a; }
+.att-diffuse { background: #7f1d1d; color: #fecaca; }
+.empty-state {
     text-align: center;
-    padding: 18px 10px;
-    border-right: 1px solid #e2e8f0;
+    padding: 56px 24px;
+    color: #64748b;
+    border: 1px dashed #334155;
+    border-radius: 16px;
+    background: #0f1629;
 }
-.pipeline-step:last-child { border-right: none; }
-.pipe-num {
-    display: inline-block;
-    width: 30px;
-    height: 30px;
-    line-height: 30px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
-    color: white;
-    font-size: 14px;
-    font-weight: 700;
-    margin-bottom: 6px;
-}
-.pipe-title { font-size: 1em; font-weight: 600; color: #1e293b; }
-.pipe-desc { font-size: 0.82em; color: #94a3b8; margin-top: 2px; }
+.empty-state h3 { color: #e2e8f0; margin: 0 0 8px 0; }
 .footer {
     text-align: center;
-    padding: 20px;
-    margin-top: 16px;
-    color: #94a3b8;
-    font-size: 0.88em;
+    padding: 18px 8px 8px;
+    color: #64748b;
+    font-size: 0.85em;
 }
 """
 
@@ -272,6 +323,16 @@ CUSTOM_CSS = """
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _empty_verdict_html() -> str:
+    return (
+        "<div class='empty-state'>"
+        "<h3>Awaiting an image</h3>"
+        "<div>Click a labeled sample on the left. "
+        "Verdict, calibrated confidence, and Grad-CAM appear here.</div>"
+        "</div>"
+    )
+
 
 def _attention_info(heatmap: np.ndarray) -> tuple[str, str, str]:
     """Return (description, css_class, tag_text) for the attention pattern."""
@@ -285,6 +346,62 @@ def _attention_info(heatmap: np.ndarray) -> tuple[str, str, str]:
         return ("Partial artifact signal", "att-moderate", "Moderate")
     else:
         return ("No clear artifact signal", "att-diffuse", "Diffuse")
+
+
+def _science_note(pred_idx: int, max_conf: float, att_tag: str) -> str:
+    """Contextual note aligned with Experiments 3–5."""
+    if pred_idx == 0 and max_conf >= 0.9 and att_tag == "Focused":
+        return (
+            "High-confidence FAKE with focused Grad-CAM is typical of "
+            "CIFAKE-style (Stable Diffusion v1.4) artifacts."
+        )
+    if max_conf < 0.7 or att_tag == "Diffuse":
+        return (
+            "Weak artifact signal — common for newer generators (e.g. GPT-4o) "
+            "or high-resolution photographs. This detector was trained on "
+            "32×32 CIFAKE images; Experiment 5 found 93% of high-res real "
+            "photos were predicted FAKE."
+        )
+    return (
+        "Trained on CIFAKE (SD v1.4) at low native resolution. "
+        "Naive cross-generator transfer looked strong except GPT-4o; "
+        "a resolution-matched control showed those numbers were inflated. "
+        "Treat OOD confidence as a soft signal (T = 1.2189, fitted in-distribution)."
+    )
+
+
+def _fit_display(pil: Image.Image, max_side: int = DISPLAY_MAX,
+                 min_side: int = DISPLAY_MIN) -> Image.Image:
+    """Scale for projector visibility without exceeding max_side."""
+    w, h = pil.size
+    longest = max(w, h)
+    shortest = min(w, h)
+    if longest > max_side:
+        scale = max_side / longest
+    elif shortest < min_side:
+        scale = min_side / shortest
+        if longest * scale > max_side:
+            scale = max_side / longest
+    else:
+        scale = 1.0
+    if abs(scale - 1.0) < 1e-6:
+        return pil
+    new_w = max(1, int(round(w * scale)))
+    new_h = max(1, int(round(h * scale)))
+    return pil.resize((new_w, new_h), Image.LANCZOS)
+
+
+def _display_pair(pil_image: Image.Image, heatmap_224: np.ndarray):
+    """Original + Grad-CAM overlay at display resolution."""
+    display_pil = _fit_display(pil_image)
+    display_np = np.array(display_pil).astype(np.float32) / 255.0
+    heat_img = Image.fromarray((np.clip(heatmap_224, 0, 1) * 255).astype(np.uint8))
+    heat_up = np.array(
+        heat_img.resize(display_pil.size, Image.BILINEAR)
+    ).astype(np.float32) / 255.0
+    overlay = show_cam_on_image(display_np, heat_up, use_rgb=True)
+    original_display = (display_np * 255).astype(np.uint8)
+    return original_display, overlay
 
 
 def _build_verdict_html(pred_idx: int, max_conf: float,
@@ -310,11 +427,11 @@ def _build_verdict_html(pred_idx: int, max_conf: float,
     html = (
         f"<div class='{card_cls}'>"
         f"<div class='verdict-title'>{title}</div>"
-        f"<div class='verdict-subtitle'>{tier} &mdash; {max_conf:.1%}</div>"
+        f"<div class='verdict-subtitle'>{tier} &mdash; {max_conf:.1%} calibrated</div>"
         f"</div>"
     )
 
-    fake_pct = max(int(p_fake * 100), 3)
+    fake_pct = max(int(round(p_fake * 100)), 3)
     real_pct = max(100 - fake_pct, 3)
     html += (
         "<div class='conf-bar-wrap'>"
@@ -322,48 +439,39 @@ def _build_verdict_html(pred_idx: int, max_conf: float,
         f"<div class='conf-fake' style='width:{fake_pct}%'>{p_fake:.0%}</div>"
         f"<div class='conf-real' style='width:{real_pct}%'>{p_real:.0%}</div>"
         "</div>"
-        "<div class='conf-labels'><span>AI-Generated</span><span>Authentic</span></div>"
+        "<div class='conf-labels'><span>P(AI-Generated)</span>"
+        "<span>P(Authentic)</span></div>"
         "</div>"
+    )
+
+    html += (
+        "<div class='stats-grid'>"
+        f"<div class='stat-card'>"
+        f"<div class='stat-val' style='color:#a5b4fc'>{max_conf:.1%}</div>"
+        f"<div class='stat-lbl'>Calibrated conf.</div></div>"
+        f"<div class='stat-card'>"
+        f"<div class='stat-val' style='color:#c4b5fd'>T={temperature:.2f}</div>"
+        f"<div class='stat-lbl'>Temperature</div></div>"
+        f"<div class='stat-card'>"
+        f"<span class='attention-tag {att_class}'>{att_tag}</span>"
+        f"<div class='stat-lbl'>Grad-CAM</div></div>"
+        "</div>"
+    )
+
+    html += (
+        f"<div style='text-align:center; margin:4px 0 8px;'>"
+        f"<div style='font-size:0.9em; color:#94a3b8;'>{attention_desc}</div></div>"
     )
 
     if max_conf < 0.7:
         html += (
             "<div class='low-conf-note'>"
-            "Low confidence may indicate an image from a generator or domain "
-            "the model was not trained on."
+            "Low confidence: the model is uncertain — often a newer generator "
+            "or a high-resolution real photo."
             "</div>"
         )
 
-    html += (
-        "<div class='stats-grid'>"
-        f"<div class='stat-card'>"
-        f"<div class='stat-val' style='color:#ef4444'>{p_fake:.1%}</div>"
-        f"<div class='stat-lbl'>P(Fake)</div></div>"
-        f"<div class='stat-card'>"
-        f"<div class='stat-val' style='color:#22c55e'>{p_real:.1%}</div>"
-        f"<div class='stat-lbl'>P(Real)</div></div>"
-        f"<div class='stat-card'>"
-        f"<div class='stat-val' style='color:#6366f1'>T={temperature:.2f}</div>"
-        f"<div class='stat-lbl'>Calibration</div></div>"
-        "</div>"
-    )
-
-    html += (
-        f"<div style='text-align:center; margin:12px 0;'>"
-        f"<span class='attention-tag {att_class}'>"
-        f"Grad-CAM: {att_tag}</span>"
-        f"<div style='font-size:0.9em; color:#94a3b8; margin-top:6px;'>"
-        f"{attention_desc}</div></div>"
-    )
-
-    html += (
-        "<div class='info-note'>"
-        "<strong>Note:</strong> Trained on CIFAKE (Stable Diffusion v1.4). "
-        "Performance may degrade on newer generators (GPT-4o, Midjourney v6). "
-        "Confidence calibrated via temperature scaling (Guo et al., 2017)."
-        "</div>"
-    )
-
+    html += f"<div class='info-note'><strong>Note:</strong> {_science_note(pred_idx, max_conf, att_tag)}</div>"
     return html
 
 
@@ -380,11 +488,8 @@ def analyse_image(
 ) -> tuple:
     """Run detection, calibration, and Grad-CAM on a single image.
 
-    Args:
-        image_input: numpy array (from Gradio) or PIL Image.
-
     Returns:
-        (verdict_html, confidence_dict, original_resized, overlay_image, details_md)
+        (verdict_html, confidence_dict, original_display, overlay_image, details_md)
     """
     if model is None:
         model = MODEL
@@ -395,13 +500,16 @@ def analyse_image(
     if transform is None:
         transform = TRANSFORM
 
+    if image_input is None:
+        return _empty_verdict_html(), {}, None, None, ""
+
     _using_global = model is MODEL
     if model is None or (_using_global and not MODEL_LOADED):
         error_msg = (
-            "## Model not loaded\n\n"
+            "<div class='low-conf-note'><strong>Model not loaded.</strong> "
             f"Place the trained checkpoint at "
-            f"`{CHECKPOINT_PATH.relative_to(PROJECT_ROOT)}` and restart.\n\n"
-            "Run notebook `02_baseline_training.ipynb` to train the model."
+            f"<code>{CHECKPOINT_PATH.relative_to(PROJECT_ROOT)}</code> and restart. "
+            "Run notebook <code>02_baseline_training.ipynb</code> to train.</div>"
         )
         return error_msg, {}, None, None, ""
 
@@ -415,9 +523,6 @@ def analyse_image(
         pil_image = image_input
 
     pil_image = pil_image.convert("RGB")
-
-    resized = pil_image.resize((224, 224), Image.LANCZOS)
-    original_np = np.array(resized).astype(np.float32) / 255.0
 
     tensor = transform(pil_image).unsqueeze(0).to(device)
 
@@ -433,8 +538,7 @@ def analyse_image(
     confidence_dict = {"AI-Generated": p_fake, "Authentic": p_real}
 
     heatmap = run_gradcam(model, tensor, model.conv_head)
-    overlay = show_cam_on_image(original_np, heatmap, use_rgb=True)
-    original_display = (original_np * 255).astype(np.uint8)
+    original_display, overlay = _display_pair(pil_image, heatmap)
 
     max_conf = max(p_fake, p_real)
     attention_desc, att_class, att_tag = _attention_info(heatmap)
@@ -447,6 +551,10 @@ def analyse_image(
     return verdict_html, confidence_dict, original_display, overlay, ""
 
 
+def _load_example(path: str):
+    return Image.open(path).convert("RGB")
+
+
 # ---------------------------------------------------------------------------
 # Gradio UI
 # ---------------------------------------------------------------------------
@@ -454,147 +562,149 @@ def analyse_image(
 def build_demo() -> gr.Blocks:
     """Construct and return the Gradio Blocks app."""
 
-    demo_samples_dir = PROJECT_ROOT / "data" / "demo_samples"
-    examples = []
-    if demo_samples_dir.exists():
-        for ext in ("*.png", "*.jpg", "*.jpeg", "*.webp"):
-            examples.extend(
-                [str(p)] for p in sorted(demo_samples_dir.glob(ext))
-            )
+    labeled = get_labeled_examples()
+    example_buttons: list[tuple] = []
 
-    with gr.Blocks(title="AI Image Detector") as demo:
-
-        gr.Markdown(
-            "# AI-Generated Image Detector\n\n"
-            "Upload any image to check whether it was created by AI. "
-            "Powered by **EfficientNet-B3** with calibrated confidence "
-            "and **Grad-CAM** visual explanations."
-        )
+    with gr.Blocks(
+        title="AI Image Detector",
+        theme=DetectorTheme(),
+        css=CUSTOM_CSS,
+    ) as demo:
 
         gr.HTML(
-            "<div class='pipeline-bar'>"
-            "<div class='pipeline-step'>"
-            "<div class='pipe-num'>1</div>"
-            "<div class='pipe-title'>Upload</div>"
-            "<div class='pipe-desc'>Any image</div></div>"
-            "<div class='pipeline-step'>"
-            "<div class='pipe-num'>2</div>"
-            "<div class='pipe-title'>Detect</div>"
-            "<div class='pipe-desc'>EfficientNet-B3</div></div>"
-            "<div class='pipeline-step'>"
-            "<div class='pipe-num'>3</div>"
-            "<div class='pipe-title'>Calibrate</div>"
-            "<div class='pipe-desc'>T = 1.22</div></div>"
-            "<div class='pipeline-step'>"
-            "<div class='pipe-num'>4</div>"
-            "<div class='pipe-title'>Explain</div>"
-            "<div class='pipe-desc'>Grad-CAM</div></div>"
+            "<div class='header-wrap'>"
+            "<div>"
+            "<div class='header-kicker'>EECS 4080 · York University</div>"
+            "<div class='header-title'>AI-Generated Image Detector</div>"
+            "<div class='header-sub'>EfficientNet-B3 · temperature scaling "
+            "(T = 1.2189) · Grad-CAM</div>"
             "</div>"
+            "<div class='stat-strip'>"
+            "<div class='stat-pill'><div class='num'>96.96%</div>"
+            "<div class='lbl'>CIFAKE accuracy</div></div>"
+            "<div class='stat-pill'><div class='num'>86.3%</div>"
+            "<div class='lbl'>GPT-4o fake det.</div></div>"
+            "<div class='stat-pill'><div class='num'>93%</div>"
+            "<div class='lbl'>Hi-res reals → FAKE</div></div>"
+            "</div></div>"
         )
 
         if not MODEL_LOADED:
             gr.Markdown(
                 "> **Warning:** No model checkpoint found. "
                 "The demo will not produce predictions until a trained "
-                "checkpoint is available."
+                "checkpoint is available at `outputs/checkpoints/best_detector.pth`."
             )
 
-        # --- Input section ---
-        gr.Markdown("## Upload an Image")
-        with gr.Row():
-            image_input = gr.Image(
-                type="pil",
-                label="Drop an image or click to upload",
-            )
+        with gr.Row(equal_height=False):
+            with gr.Column(scale=4):
+                image_input = gr.Image(
+                    type="pil",
+                    label="Selected sample",
+                    height=420,
+                    interactive=False,
+                    sources=[],
+                    buttons=[],
+                    placeholder="Click a labeled sample below",
+                )
+                gr.Markdown(
+                    "**Curated samples only** — no upload. "
+                    "This detector was trained at CIFAKE resolution; "
+                    "93% of high-resolution real photos are predicted FAKE "
+                    "(Experiment 5)."
+                )
+                if labeled:
+                    gr.Markdown("**One-click samples** — runs analysis immediately")
+                    with gr.Row():
+                        example_buttons = []
+                        for path, label in labeled:
+                            example_buttons.append(
+                                (gr.Button(label, size="sm"), path)
+                            )
 
-        analyse_btn = gr.Button(
-            "Analyse Image",
-            variant="primary",
-            size="lg",
-        )
+            with gr.Column(scale=6):
+                verdict_output = gr.HTML(value=_empty_verdict_html())
+                with gr.Row():
+                    original_output = gr.Image(
+                        label="Original",
+                        type="numpy",
+                        height=280,
+                        interactive=False,
+                        sources=[],
+                        buttons=[],
+                    )
+                    heatmap_output = gr.Image(
+                        label="Grad-CAM",
+                        type="numpy",
+                        height=280,
+                        interactive=False,
+                        sources=[],
+                        buttons=[],
+                    )
 
-        # --- Examples ---
-        if examples:
-            gr.Examples(
-                examples=examples,
-                inputs=image_input,
-                label="Or try these sample images",
-            )
-
-        # --- Results section ---
-        gr.Markdown("---")
-        gr.Markdown("## Results")
-
-        verdict_output = gr.HTML(
-            value=(
-                "<div style='text-align:center; padding:40px 20px; color:#94a3b8;'>"
-                "<div style='font-size:1.2em;'>Results will appear here after analysis</div>"
-                "</div>"
-            ),
-        )
-
-        with gr.Row():
-            original_output = gr.Image(
-                label="Original (224 x 224)",
-                type="numpy",
-            )
-            heatmap_output = gr.Image(
-                label="Grad-CAM Heatmap",
-                type="numpy",
-            )
-
-        # Hidden outputs for function signature compatibility
         confidence_output = gr.Label(visible=False)
         details_output = gr.Markdown(visible=False)
 
-        analyse_btn.click(
-            fn=analyse_image,
-            inputs=[image_input],
-            outputs=[verdict_output, confidence_output,
-                     original_output, heatmap_output, details_output],
-        )
+        outputs = [
+            verdict_output, confidence_output,
+            original_output, heatmap_output, details_output,
+        ]
 
-        # --- Info sections ---
-        gr.Markdown("---")
-
-        with gr.Accordion("How It Works", open=False):
-            gr.Markdown(
-                "### Detection Pipeline\n\n"
-                "1. **Detection:** EfficientNet-B3 fine-tuned on 60,000 CIFAKE images "
-                "(96.96% test accuracy, AUC 0.9971).\n"
-                "2. **Calibration:** Post-hoc temperature scaling (T=1.2189) adjusts "
-                "confidence to better reflect true accuracy (Guo et al., 2017).\n"
-                "3. **Explainability:** Grad-CAM highlights the most influential image "
-                "regions (Selvaraju et al., 2017).\n\n"
-                "### What to Look For\n\n"
-                "| Image Source | Expected Confidence | Grad-CAM Pattern |\n"
-                "|---|---|---|\n"
-                "| CIFAKE (SD v1.4) | High (~95%+) | Focused on artifact regions |\n"
-                "| Midjourney v6 | Low-Moderate | Moderately diffuse |\n"
-                "| GPT-4o | Low (~50%) | Fully diffuse, no clear signal |\n\n"
-                "This demonstrates the **generalisation gap**: the detector relies on "
-                "Stable Diffusion-specific artifacts that newer models don't produce."
+        for btn, path in example_buttons:
+            btn.click(
+                fn=lambda p=path: _load_example(p),
+                outputs=image_input,
+            ).then(
+                fn=analyse_image,
+                inputs=[image_input],
+                outputs=outputs,
             )
 
-        with gr.Accordion("About This Project", open=False):
+        with gr.Accordion("How it works", open=False):
             gr.Markdown(
-                "**Project:** AI-Generated Image Detection -- Evaluating Generalisation "
-                "Across Generative Model Generations\n\n"
-                "**Course:** EECS 4080 -- Computer Science Project, York University\n\n"
-                "**Author:** Krishi Rajeshkumar Shah\n\n"
-                "**Supervisor:** Mona Nasery\n\n"
-                "**Research Question:** How well do AI-generated image detectors trained "
-                "on current benchmark datasets generalise to images produced by "
-                "next-generation generative models?\n\n"
-                "**Key Finding:** Cross-generator evaluation shows significant performance "
-                "degradation on newer generators (GPT-4o, Midjourney v6), confirming the "
-                "detector relies on SD-specific artifacts that newer models no longer produce."
+                "1. **Detect** — EfficientNet-B3 fine-tuned on CIFAKE "
+                "(96.96% test accuracy, AUC 0.9971).\n"
+                "2. **Calibrate** — temperature scaling, T = 1.2189 "
+                "(Guo et al., 2017). Fitted on CIFAKE; ECE worsens under shift.\n"
+                "3. **Explain** — Grad-CAM on `model.conv_head` "
+                "(Selvaraju et al., 2017).\n\n"
+                "**What to look for**\n\n"
+                "| Sample | Typical result |\n"
+                "|---|---|\n"
+                "| CIFAKE Real | REAL, high confidence, diffuse CAM |\n"
+                "| CIFAKE Fake | FAKE, high confidence, focused artifacts |\n"
+                "| StyleGAN / Midjourney | Often FAKE under the *naive* protocol |\n"
+                "| GPT-4o | Harder case (86.3% fake detection natively) |\n"
+            )
+
+        with gr.Accordion("Research findings", open=False):
+            gr.Markdown(
+                "Naive protocol (high-res fakes + CIFAKE reals): StyleGAN / "
+                "Midjourney / Janus-Pro ~94% fake detection; GPT-4o **86.3%**; "
+                "SD3/Flux 97%.\n\n"
+                "**Resolution control (Experiment 5):** 93% of high-resolution "
+                "*real* photographs were predicted FAKE. Forcing images to 32×32 "
+                "collapses generator fake detection to roughly 35–62%. Apparent "
+                "cross-generator transfer was largely resolution-driven.\n\n"
+                "Full write-up: `reports/final_report.md` · "
+                "[GitHub](https://github.com/krishi-shah/ai-image-detection)"
+            )
+
+        with gr.Accordion("About this project", open=False):
+            gr.Markdown(
+                "**AI-Generated Image Detection — Evaluating Generalisation "
+                "Across Generative Model Generations**\n\n"
+                "EECS 4080 · York University · Krishi Rajeshkumar Shah · "
+                "Supervisor: Mona Nasery\n\n"
+                "**Research question:** How well do detectors trained on current "
+                "benchmarks generalise to next-generation generators, and what "
+                "accounts for the gap?"
             )
 
         gr.HTML(
             "<div class='footer'>"
-            "EECS 4080 &bull; York University &bull; "
-            "EfficientNet-B3 + Temperature Scaling + Grad-CAM"
+            "EECS 4080 · York University · "
+            "EfficientNet-B3 + temperature scaling + Grad-CAM"
             "</div>"
         )
 

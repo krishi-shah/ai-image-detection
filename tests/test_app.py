@@ -13,7 +13,7 @@ import gradio as gr
 
 from src.model.detector import build_detector
 from src.utils.data_loader import get_transforms
-from app import analyse_image, build_demo
+from app import analyse_image, build_demo, get_labeled_examples
 
 
 # ---------------------------------------------------------------------------
@@ -78,13 +78,14 @@ class TestOutputStructure:
     def test_original_image_shape(self, dummy_model, device, transform):
         _, _, original, _, _ = _run(dummy_model, device, transform)
         assert isinstance(original, np.ndarray)
-        assert original.shape == (224, 224, 3)
+        assert original.ndim == 3 and original.shape[2] == 3
         assert original.dtype == np.uint8
+        assert max(original.shape[:2]) <= 512
 
     def test_heatmap_shape_and_range(self, dummy_model, device, transform):
-        _, _, _, overlay, _ = _run(dummy_model, device, transform)
+        _, _, original, overlay, _ = _run(dummy_model, device, transform)
         assert isinstance(overlay, np.ndarray)
-        assert overlay.shape == (224, 224, 3)
+        assert overlay.shape == original.shape
         assert overlay.dtype == np.uint8
         assert overlay.min() >= 0
         assert overlay.max() <= 255
@@ -104,27 +105,31 @@ class TestEdgeCases:
         gray = Image.fromarray(
             np.random.randint(0, 256, (100, 100), dtype=np.uint8), "L"
         )
-        _, conf, _, overlay, _ = _run(dummy_model, device, transform, img=gray)
-        assert overlay.shape == (224, 224, 3)
+        _, conf, original, overlay, _ = _run(dummy_model, device, transform, img=gray)
+        assert overlay.ndim == 3 and overlay.shape[2] == 3
+        assert overlay.shape == original.shape
         assert abs(sum(conf.values()) - 1.0) < 1e-5
 
     def test_rgba_input(self, dummy_model, device, transform):
         rgba = Image.fromarray(
             np.random.randint(0, 256, (100, 100, 4), dtype=np.uint8), "RGBA"
         )
-        _, conf, _, overlay, _ = _run(dummy_model, device, transform, img=rgba)
-        assert overlay.shape == (224, 224, 3)
+        _, conf, original, overlay, _ = _run(dummy_model, device, transform, img=rgba)
+        assert overlay.shape == original.shape
+        assert overlay.shape[2] == 3
 
     def test_small_image(self, dummy_model, device, transform):
         small = _make_rgb_image(16, 16)
-        _, conf, _, overlay, _ = _run(dummy_model, device, transform, img=small)
-        assert overlay.shape == (224, 224, 3)
+        _, conf, original, overlay, _ = _run(dummy_model, device, transform, img=small)
+        assert overlay.shape == original.shape
+        assert min(overlay.shape[:2]) >= 224
         assert abs(sum(conf.values()) - 1.0) < 1e-5
 
     def test_large_image(self, dummy_model, device, transform):
         large = _make_rgb_image(1024, 1024)
-        _, conf, _, overlay, _ = _run(dummy_model, device, transform, img=large)
-        assert overlay.shape == (224, 224, 3)
+        _, conf, original, overlay, _ = _run(dummy_model, device, transform, img=large)
+        assert overlay.shape == original.shape
+        assert max(overlay.shape[:2]) == 512
         assert abs(sum(conf.values()) - 1.0) < 1e-5
 
 
@@ -183,3 +188,20 @@ class TestGradioBlocks:
     def test_build_demo_returns_blocks(self):
         demo = build_demo()
         assert isinstance(demo, gr.Blocks)
+
+    def test_labeled_examples_use_research_names(self):
+        pairs = get_labeled_examples()
+        labels = {label for _, label in pairs}
+        expected = {"CIFAKE Real", "CIFAKE Fake", "StyleGAN", "Midjourney", "GPT-4o"}
+        assert expected.issubset(labels) or len(pairs) == 0
+
+    def test_none_image_returns_empty_state(self, dummy_model, device, transform):
+        verdict, conf, original, overlay, details = analyse_image(
+            None, model=dummy_model, device=device,
+            temperature=1.0, transform=transform,
+        )
+        assert "Awaiting" in verdict or "awaiting" in verdict.lower()
+        assert conf == {}
+        assert original is None
+        assert overlay is None
+        assert isinstance(details, str)
