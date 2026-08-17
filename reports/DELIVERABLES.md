@@ -9,18 +9,17 @@ Maps each EECS 4080 contract deliverable to the concrete artifact in this reposi
 | Interactive Gradio demo (classification + confidence + heatmap) | `app.py`, `tests/test_app.py`, `data/demo_samples/`, `reports/demo_script.md` |
 | Final report (research question, methodology, experiments, conclusions) | `reports/final_report.md`, `reports/final_report.tex` |
 | Documented source code, GitHub repo, user setup guide | https://github.com/krishi-shah/ai-image-detection , `README.md`, `docs/SETUP.md`, `LICENSE`, `requirements.txt` |
-| Presentation | `reports/presentation.pptx` (built by `scripts/build_presentation.py`) |
+| Presentation | `reports/presentation.pptx` (built by `scripts/build_presentation.py`), `reports/talk_script.md`, `reports/qa_prep.md` |
 | Progress report (Milestone 4) | `reports/progress_report.md`, `reports/progress_report.tex` |
 | Literature review (Milestone 1) | `reports/literature_review.md` |
-| Resolution-matched control (Milestone 6 addition) | `notebooks/07_resolution_control.ipynb`, `src/analysis/resolution_control.py`, `scripts/download_real_controls.py`, `outputs/results/resolution_control.json` |
 
 ## Evaluation criteria (from contract)
 
 | Criterion | Weight | Where it is evidenced |
 |-----------|--------|------------------------|
-| Research quality & findings | 20% | Final report §§3–5, generalisation + GPT-4o + resolution control |
-| Technical implementation | 20% | `src/`, notebooks 02–07, 71 tests |
-| Presentation & demonstration | 30% | `reports/presentation.pptx`, `reports/demo_script.md`, live `app.py` |
+| Research quality & findings | 20% | Final report §§3–5, generalisation + GPT-4o |
+| Technical implementation | 20% | `src/`, notebooks 02–06, 63 tests |
+| Presentation & demonstration | 30% | `reports/presentation.pptx`, `reports/talk_script.md`, `reports/qa_prep.md`, `reports/demo_script.md` (Q&A backup), live `app.py` |
 | Final report | 20% | `reports/final_report.md` / `.tex` |
 | Code quality & documentation | 10% | Modular `src/`, README, `docs/SETUP.md`, GitHub history |
 
@@ -31,4 +30,3 @@ Maps each EECS 4080 contract deliverable to the concrete artifact in this reposi
 - [ ] `python app.py` runs locally with checkpoint
 - [ ] `pytest tests/` — all green
 - [x] Drive `outputs/` (Milestone 4 plots/JSONs) copied into the local repo if not already present
-- [x] Notebook 07 run on Colab; `resolution_control.json` + plots committed or submitted

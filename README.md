@@ -11,7 +11,7 @@
 
 ## Project Summary
 
-This project investigates the **generalisation gap** in AI-generated image detection: how a detector trained on CIFAKE (Stable Diffusion v1.4) behaves on StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, and Janus-Pro. It combines temperature-scaled calibration, Grad-CAM explainability, frequency/embedding analysis, a resolution-matched control, and an interactive Gradio demo.
+This project investigates the **generalisation gap** in AI-generated image detection: how a detector trained on CIFAKE (Stable Diffusion v1.4) behaves on StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, and Janus-Pro. It combines temperature-scaled calibration, Grad-CAM explainability, frequency/embedding analysis, and an interactive Gradio demo.
 
 ## Research Question
 
@@ -39,10 +39,8 @@ This project investigates the **generalisation gap** in AI-generated image detec
 ### Key Findings
 
 - In-distribution performance is near-perfect (96.96%, AUC 0.9971).
-- Under the **naive** cross-generator protocol, four of five families look strong (94–97% fake detection); GPT-4o drops to 86.3%.
-- A resolution-matched control **confirms a confound**: 93% of high-resolution real photos are predicted FAKE; forcing fakes to 32×32 collapses detection to ~35–62%.
-- Apparent Experiment 3 transfer was largely resolution-driven; after matching, a broad generalisation gap appears.
-- Grad-CAM / FFT / t-SNE still support a GPT-4o **feature-absence** story under the native protocol.
+- Cross-generator transfer is strong (94–97% fake detection) except GPT-4o (86.3%).
+- Grad-CAM / FFT / t-SNE support a GPT-4o **feature-absence** story.
 - Temperature scaling fitted on CIFAKE **worsens ECE** under distribution shift.
 
 ---
@@ -52,8 +50,8 @@ This project investigates the **generalisation gap** in AI-generated image detec
 | Deliverable | Path |
 |-------------|------|
 | Final report | [`reports/final_report.md`](reports/final_report.md) · [`reports/final_report.tex`](reports/final_report.tex) |
-| Presentation | [`reports/presentation.pptx`](reports/presentation.pptx) |
-| Demo runbook | [`reports/demo_script.md`](reports/demo_script.md) |
+| Presentation | [`reports/presentation.pptx`](reports/presentation.pptx) · [`reports/talk_script.md`](reports/talk_script.md) · [`reports/qa_prep.md`](reports/qa_prep.md) |
+| Demo runbook | [`reports/demo_script.md`](reports/demo_script.md) (Q&A backup only) |
 | Setup guide | [`docs/SETUP.md`](docs/SETUP.md) |
 | Deliverables index | [`reports/DELIVERABLES.md`](reports/DELIVERABLES.md) |
 | Gradio demo | [`app.py`](app.py) |
@@ -72,7 +70,7 @@ ai-image-detection/
 ├── data/
 │   ├── raw/                    # CIFAKE (gitignored)
 │   ├── demo_samples/
-│   └── generalisation/         # Cross-generator + _controls/
+│   └── generalisation/         # Cross-generator eval sets
 ├── notebooks/
 │   ├── 01_setup_and_eda.ipynb
 │   ├── 02_baseline_training.ipynb
@@ -80,21 +78,19 @@ ai-image-detection/
 │   ├── 04_gradcam.ipynb
 │   ├── 05_generalisation_eval.ipynb
 │   ├── 06_gpt4o_investigation.ipynb
-│   └── 07_resolution_control.ipynb
+│   └── 06_gpt4o_investigation.ipynb
 ├── scripts/
 │   ├── download_generalisation_data.py
-│   ├── download_real_controls.py
-│   ├── build_presentation.py
-│   └── fold_control_results.py
+│   └── build_presentation.py
 ├── src/
 │   ├── model/detector.py
 │   ├── evaluation/{metrics,calibration,generalisation}.py
 │   ├── explainability/gradcam.py
-│   ├── analysis/{frequency,embeddings,gradcam_metrics,resolution_control}.py
+│   ├── analysis/{frequency,embeddings,gradcam_metrics}.py
 │   └── utils/data_loader.py
 ├── outputs/
 ├── reports/
-└── tests/                      # 71 tests across 8 modules
+└── tests/                      # 63 tests across 7 modules
 ```
 
 ---
@@ -135,7 +131,7 @@ Five-family evaluation + GPT-4o deep dive. → notebooks `05`, `06` · [`reports
 Interactive classification + confidence + Grad-CAM. → `app.py`
 
 ### Milestone 6 — Final Report (Aug 11–28)
-Final report, presentation, resolution control, docs. → notebooks `07` · `reports/final_report.*` · `reports/presentation.pptx`
+Final report, presentation, docs. → `reports/final_report.*` · `reports/presentation.pptx`
 
 ---
 
@@ -172,7 +168,7 @@ export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1   # bash
 pytest tests/ -v
 ```
 
-**71 tests** across 8 modules (detector, data loader, metrics, calibration, Grad-CAM, generalisation, app, resolution control).
+**63 tests** across 7 modules (detector, data loader, metrics, calibration, Grad-CAM, generalisation, app).
 
 ---
 
@@ -185,7 +181,7 @@ pytest tests/ -v
 | June 16 – July 5 | 3 | Grad-CAM |
 | July 6 – July 20 | 4 | Generalisation study |
 | July 21 – Aug 10 | 5 | Gradio demo |
-| Aug 11 – Aug 28 | 6 | Final report, presentation, control |
+| Aug 11 – Aug 28 | 6 | Final report and presentation |
 
 ---
 

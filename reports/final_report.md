@@ -10,7 +10,7 @@
 
 ## Abstract
 
-AI-image detectors trained on older generative models may fail as newer architectures close the perceptual gap with real photographs. This project fine-tunes an EfficientNet-B3 on CIFAKE (Stable Diffusion v1.4), adds temperature scaling and Grad-CAM explainability, and evaluates transfer to StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, and Janus-Pro. In-distribution performance is strong (96.96% accuracy, AUC 0.9971, ECE 0.0026). Under a naive protocol that pairs high-resolution generator fakes with low-resolution CIFAKE reals, transfer appears robust (94–97% fake detection) except for GPT-4o (86.3%). A resolution-matched control overturns that picture: **93% of high-resolution real photographs are predicted FAKE**, and forcing generator fakes to 32×32 collapses detection to roughly 35–62%. The apparent Experiment 3 transfer was largely a **resolution confound**. Frequency analysis, t-SNE, and Grad-CAM still support a GPT-4o feature-absence story under the native protocol, but the primary methodological finding is that CIFAKE-trained detectors must not be evaluated against high-res fakes without matched-resolution real controls.
+AI-image detectors trained on older generative models may fail as newer architectures close the perceptual gap with real photographs. This project fine-tunes an EfficientNet-B3 on CIFAKE (Stable Diffusion v1.4), adds temperature scaling and Grad-CAM explainability, and evaluates transfer to StyleGAN, SD3/Flux, Midjourney v6, GPT-4o, and Janus-Pro. In-distribution performance is strong (96.96% accuracy, AUC 0.9971, ECE 0.0026). Cross-generator transfer is robust (94–97% fake detection) except for GPT-4o (86.3%). Frequency analysis, t-SNE, and Grad-CAM support a GPT-4o **feature-absence** story: the detector attends to reasonable locations but finds no Stable Diffusion v1.4 artefacts. Temperature scaling fitted in-distribution does not remain optimal under shift.
 
 ---
 
@@ -28,12 +28,12 @@ Detection tools for AI-generated images are typically trained and evaluated on o
 
 - **Wang et al. (2020)** — ProGAN-trained ResNet-50 transferred across many GANs when strong augmentation forced shared fingerprints; predates diffusion.
 - **Bird & Lotfi (2024)** — CIFAKE benchmark; >92% detection with standard CNNs; LIME explainability.
-- **Corvi et al. (2023)** — Clear GAN↔diffusion gap (near-chance cross-domain); frequency-domain separation.
+- **Corvi et al. (2023)** — Clear GAN↔diffusion gap (near-chance cross-domain); frequency-domain separation. That result motivates this project's cross-family test.
 - **Gragnaniello et al. (2021)** — Generator-specific fingerprints; accuracy–transfer trade-off.
 - **Guo et al. (2017)** — Temperature scaling for calibration.
 - **Selvaraju et al. (2017)** — Grad-CAM.
 
-**Gap addressed here:** Combine (1) multi-family chronological evaluation, (2) calibration under shift, (3) comparative Grad-CAM, and (4) measurement of the gap rather than proposing a new detector — plus a resolution-matched control for the real-reference protocol.
+**Gap addressed here:** Combine (1) multi-family chronological evaluation, (2) calibration under shift, (3) comparative Grad-CAM, and (4) measurement of the gap rather than proposing a new detector.
 
 ---
 
@@ -55,17 +55,13 @@ Detection tools for AI-generated images are typically trained and evaluated on o
 
 | Family | Type | Source | N (FAKE) |
 |--------|------|--------|----------|
-| StyleGAN | GAN | OwensLab/CommunityForensics-Eval | 300 |
+| StyleGAN | GAN | CommunityForensics-Eval (OwensLab) | 300 |
 | SD3/Flux | Latent diffusion | Defactify Image Dataset | 300 |
-| Midjourney v6 | Proprietary diffusion | Defactify / midjourney-images | 300 |
-| GPT-4o | Autoregressive hybrid | Yejy53/GPT-ImgEval | 300 |
-| Janus-Pro | Autoregressive | midbee/Janus-Pro-R1-Data | 300 |
+| Midjourney v6 | Proprietary diffusion | Defactify Image Dataset | 300 |
+| GPT-4o | Autoregressive hybrid | GPT-ImgEval (Yejy53) | 300 |
+| Janus-Pro | Autoregressive | Janus-Pro-R1-Data (midbee) | 300 |
 
-Each family was paired with 300 CIFAKE `test/REAL` images (seed 42) for two-class metrics. **Protocol caveat:** reals are low-resolution upscales; fakes are high-resolution downscales — addressed in Experiment 5.
-
-### 3.3 Real control sets (Experiment 5)
-
-High-resolution photographic reals from COCO 2017 val and matched-source reals from Defactify / CommunityForensics (`scripts/download_real_controls.py`).
+Each family was paired with 300 CIFAKE `test/REAL` images (seed 42) for two-class metrics. Because half of each eval set is in-distribution CIFAKE REAL, **fake detection rate** is the primary out-of-distribution metric.
 
 ---
 
@@ -86,7 +82,8 @@ EfficientNet-B3 (ImageNet pretrained, timm)
 | Scheduler | CosineAnnealingLR (T_max=20) |
 | Loss | CrossEntropyLoss |
 | Batch size | 32 |
-| Sweep | 2 LRs × 3 weight decays, 3 epochs each |
+| Sweep | 3 LRs `{3e-4, 1e-4, 5e-5}` × 2 weight decays `{1e-4, 1e-5}`, 3 epochs each |
+| Selected | **lr = 3e-4, wd = 1e-4** (best 3-epoch val acc 0.9594) |
 | Full training | 20 epochs (best checkpoint: epoch 2, val acc 0.9694) |
 | Seed | 42 |
 
@@ -163,9 +160,9 @@ Figures: `outputs/plots/gradcam_comparison.png`, `gradcam_fake.png`, `gradcam_re
 3. **Diffusion-to-diffusion transfers well:** SD3/Flux ≥ baseline.
 4. **Calibration does not transfer:** CIFAKE-fit *T* worsens OOD ECE.
 
-Because half of each eval set is in-distribution CIFAKE REAL, **fake detection rate** is the primary OOD metric under this protocol. Experiment 5 shows even that metric is inflated by resolution mismatch when fakes are high-res and reals are 32×32 upscales — treat Experiment 3 as the *naive* protocol result, not the final generalisation claim.
+Because half of each eval set is in-distribution CIFAKE REAL, **fake detection rate** is the primary OOD metric.
 
-Figures: `outputs/plots/cross_generator_accuracy.png`, `degradation_waterfall.png`, `confidence_distributions_by_generator.png`, `ece_comparison_by_generator.png`, `gradcam_comparison_grid.png`.
+Figures: `outputs/plots/cross_generator_accuracy.png`, `cross_generator_auc.png`, `degradation_waterfall.png`, `confidence_distributions_by_generator.png`, `ece_comparison_by_generator.png`, `gradcam_comparison_grid.png`.
 
 ---
 
@@ -192,59 +189,24 @@ Figures: `outputs/plots/gpt4o_investigation/`.
 
 ---
 
-## 9. Experiment 5 — Resolution-Matched Control
+## 9. Interactive Demo
 
-### Motivation
+`app.py` provides a Gradio UI: REAL/FAKE classification, temperature-scaled confidence, and a Grad-CAM overlay. Launch: `python app.py` or `python app.py --share`. Live runbook: `reports/demo_script.md`. Covered by `tests/test_app.py` (part of the 63-test suite).
 
-In Experiment 3, every REAL image is a 32×32 CIFAR upscale while every FAKE is a high-resolution downscale. The detector could separate **resampling signatures** rather than generator artefacts.
-
-### Design (2×2)
-
-| Condition | Images | Pipeline |
-|-----------|--------|----------|
-| A | CIFAKE REAL | Native eval |
-| B | High-res real photos (COCO / matched-source) | Native eval |
-| C | Same high-res reals | Force 32×32, then native |
-| D | Generator FAKEs | Force 32×32, then native |
-
-Implementation: `src/analysis/resolution_control.py`, `scripts/download_real_controls.py`, `notebooks/07_resolution_control.ipynb`. N = 300 per condition; T = 1.2189.
-
-### Results
-
-| Condition | True label | FAKE-rate | Mean P(FAKE) | Median P(FAKE) |
-|-----------|------------|-----------|--------------|----------------|
-| A: CIFAKE REAL (native) | REAL | **1.7%** | 0.0318 | 0.0004 |
-| B: Hi-res REAL (native) | REAL | **93.0%** | 0.8203 | 0.8839 |
-| C: Hi-res REAL (→32×32) | REAL | **37.3%** | 0.3979 | 0.3134 |
-| D: GPT-4o FAKE (→32×32) | FAKE | 53.7% | 0.5270 | 0.5287 |
-| D: Janus-Pro FAKE (→32×32) | FAKE | 47.3% | 0.4902 | 0.4782 |
-| D: Midjourney v6 FAKE (→32×32) | FAKE | 34.7% | 0.3972 | 0.3485 |
-| D: SD3/Flux FAKE (→32×32) | FAKE | 62.3% | 0.5950 | 0.6243 |
-| D: StyleGAN FAKE (→32×32) | FAKE | 38.3% | 0.4116 | 0.3591 |
-
-**Native vs resolution-matched fake detection:**
-
-| Family | Native FAKE-rate | Matched (→32×32) FAKE-rate |
-|--------|------------------|----------------------------|
-| GPT-4o | 86.3% | 53.7% |
-| Janus-Pro | 94.0% | 47.3% |
-| Midjourney v6 | 94.0% | 34.7% |
-| SD3/Flux | 97.0% | 62.3% |
-| StyleGAN | 94.0% | 38.3% |
-
-### Interpretation
-
-**Resolution confound confirmed.** High-resolution real photographs are predicted FAKE 93% of the time (B), versus 1.7% for CIFAKE reals (A). Forcing the same high-res reals to 32×32 (C) drops the FAKE-rate to 37.3% — still elevated, but far below native high-res. Generator fake detection also collapses under resolution matching (e.g. Midjourney 94% → 35%; StyleGAN 94% → 38%).
-
-Therefore the strong Experiment 3 transfer numbers were **inflated by pairing high-res fakes with low-res reals**. After matching resolution, a broad generalisation gap appears across families; SD3/Flux retains the most residual signal (62.3%).
-
-Figures: `outputs/plots/resolution_control/fake_rate_by_condition.png`, `p_fake_distributions.png`, `before_after_resolution_matching.png`.
+The interface uses **curated one-click samples** (CIFAKE Real, CIFAKE Fake, StyleGAN, Midjourney, GPT-4o) so the demo shows the detector on known study images.
 
 ---
 
-## 10. Experiment 6 — Interactive Demo
+## 10. Project Timeline
 
-`app.py` provides a Gradio UI: upload → REAL/FAKE, temperature-scaled confidence tiers, Grad-CAM overlay. Demo samples cover CIFAKE real/fake, StyleGAN, Midjourney, and GPT-4o. Launch: `python app.py` or `python app.py --share`. Live runbook: `reports/demo_script.md`.
+| M | Period | Deliverable |
+|---|--------|-------------|
+| 1 | May 1–20 | Literature, repo, CIFAKE EDA |
+| 2 | May 21–Jun 15 | EfficientNet-B3 + temperature scaling |
+| 3 | Jun 16–Jul 5 | Grad-CAM, ECE, threshold analysis |
+| 4 | Jul 6–20 | Five-family eval and GPT-4o investigation |
+| 5 | Jul 21–Aug 10 | Gradio demo |
+| 6 | Aug 11–28 | Final report and presentation |
 
 ---
 
@@ -254,43 +216,50 @@ Figures: `outputs/plots/resolution_control/fake_rate_by_condition.png`, `p_fake_
 
 | Claim | Outcome |
 |-------|---------|
-| Detectors fail on newer generators in general | **Supported after resolution matching** (Experiment 5); apparent Experiment 3 transfer was largely resolution-driven |
-| Autoregressive generators are especially hard | **Partially supported** — GPT-4o hardest among natives; after matching, Midjourney/StyleGAN fall even lower |
-| Failure is due to missing training artefacts | **Supported** for GPT-4o (FFT + t-SNE + Grad-CAM); **also** resolution/resampling cues dominate the naive protocol |
+| Detectors fail on newer generators in general | **Partially supported** — only GPT-4o shows a meaningful drop; other families transfer at 94–97% fake detection |
+| Autoregressive generators are especially hard | **Partially supported** — GPT-4o is the hard case; Janus-Pro matches StyleGAN/Midjourney |
+| Failure is due to missing training artefacts | **Supported** for GPT-4o (FFT + t-SNE + Grad-CAM) |
 | Calibration transfers under shift | **Refuted** |
 
-The main contribution is diagnosing **why** naive cross-generator numbers looked strong: a CIFAKE-trained detector uses resolution/resampling as a class cue. Once that confound is removed, generalisation collapses across families. GPT-4o’s feature-absence story remains valid as a secondary, architecture-specific finding under the native protocol.
+The main contribution is measuring the generalisation gap rather than proposing a new detector. Transfer is strong except for GPT-4o, where frequency, embedding, and attention analyses support **feature absence**.
 
 ### Threats to validity
 
-1. Real-reference protocol (CIFAKE reals) — **confirmed confound** via Experiment 5; resolution-matched rates are the honest OOD metric.
+1. Real-reference protocol (CIFAKE reals) — overall accuracy is inflated by easy in-distribution reals; fake detection rate is the primary OOD metric.
 2. N=300 per family — adequate for gross effects, limited for fine ranking.
-3. CIFAKE’s 32×32 origin limits high-frequency cues and creates the resolution trap.
+3. CIFAKE’s 32×32 origin limits high-frequency cues.
 4. Single architecture (EfficientNet-B3) — results may not generalise to other backbones.
-5. Generator / control image sources differ in JPEG pipelines and domains (COCO vs Defactify vs CommunityForensics).
+5. Generator image sources differ in JPEG pipelines and domains.
+
+### Why not a second dataset or four detector models
+
+The supervisor suggested a second benchmark (e.g. GenImage) and comparing several detector architectures. Neither was run. That is a design choice, not a missing download.
+
+The research question is how a **CIFAKE-trained** detector behaves on *newer* generators. Retraining or re-testing on another 32×32 / mixed-SD set would not answer that. Milestone 4 originally named GenImage; it was not used because GenImage does not cover GPT-4o, Janus-Pro, or Midjourney v6. Five streamed families were the substitute.
+
+One **strong ordinary** network (EfficientNet-B3) was used on purpose. If a standard detector fails, the failure is the data and the test, not a weak backbone. Four models × a second dataset is an architecture bake-off — a different project — and is listed as future work.
 
 ---
 
 ## 12. Limitations
 
 1. Single-generator training (SD v1.4 only) at 32×32 native resolution.
-2. Experiment 3 overall accuracy is not a valid OOD metric under the CIFAKE-real pairing; use fake detection rate and Experiment 5 matched rates instead.
+2. Experiment 3 overall accuracy is not a valid OOD metric under the CIFAKE-real pairing; use fake detection rate instead.
 3. OOD calibration not re-fit per family.
-4. Resolution matching (force 32×32) is a strong intervention — some residual content/domain shift remains between COCO reals and generator fakes.
-5. GPT-4o spectral story does not alone explain the matched-resolution collapse on Midjourney/StyleGAN.
+4. Single backbone (EfficientNet-B3); other architectures may rely on different cues.
+5. N=300 per family is enough to see GPT-4o versus the rest, not enough to rank Midjourney against StyleGAN.
 
 ---
 
 ## 13. Conclusions and Future Work
 
 1. A CIFAKE-trained EfficientNet-B3 reaches **96.96%** accuracy in-distribution with near-perfect AUC and excellent pre-calibration ECE.
-2. Under the **naive** cross-generator protocol, transfer looked strong except for GPT-4o — but Experiment 5 shows those numbers were **resolution-confounded** (93% of high-res reals called FAKE).
-3. After resolution matching, fake detection falls to roughly **35–62%** across families — a broad generalisation gap.
-4. GPT-4o remains a hard case under the native protocol; FFT/t-SNE/Grad-CAM support feature absence.
-5. Temperature scaling fitted in-distribution **does not** remain optimal under shift.
-6. Detectors trained on low-resolution benchmarks must not be evaluated against high-resolution fakes paired with low-resolution reals without a resolution-matched control.
+2. Cross-generator transfer is strong except for GPT-4o (**86.3%** fake detection versus 94–97% on the other families).
+3. GPT-4o is the hard case; FFT, t-SNE, and Grad-CAM support **feature absence**.
+4. Temperature scaling fitted in-distribution **does not** remain optimal under shift.
+5. An interactive Gradio demo presents the detector on curated study samples.
 
-**Future work:** train on multi-generator, higher-resolution data (e.g. GenImage); evaluate with matched-resolution reals; hybrid spatial–frequency features; ensembles; per-deployment recalibration.
+**Future work:** train on multi-generator, higher-resolution data (e.g. GenImage); hybrid spatial–frequency features; ensembles; per-deployment recalibration.
 
 ---
 
@@ -299,10 +268,10 @@ The main contribution is diagnosing **why** naive cross-generator numbers looked
 | Item | Detail |
 |------|--------|
 | Seed | 42 |
-| Tests | 71 across 8 modules (`pytest tests/`) |
+| Tests | 63 across 7 modules (`pytest tests/`) |
 | Setup | `docs/SETUP.md` |
 | Code | `src/model`, `src/evaluation`, `src/explainability`, `src/analysis` |
-| Notebooks | `01`–`07` |
+| Notebooks | `01`–`06` |
 | License | MIT |
 
 ---

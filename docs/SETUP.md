@@ -85,13 +85,12 @@ Temperature and baseline metrics live in `outputs/results/baseline_results.json`
 | `04_gradcam.ipynb` | Grad-CAM heatmaps |
 | `05_generalisation_eval.ipynb` | Cross-generator evaluation |
 | `06_gpt4o_investigation.ipynb` | FFT, t-SNE, Grad-CAM metrics |
-| `07_resolution_control.ipynb` | Resolution-matched real-image control |
+| `06_gpt4o_investigation.ipynb` | FFT, t-SNE, Grad-CAM metrics |
 
-### Generalisation data (notebooks 05–07)
+### Generalisation data (notebooks 05–06)
 
 ```bash
 python scripts/download_generalisation_data.py --output-dir data/generalisation --per-generator 300
-python scripts/download_real_controls.py --output-dir data/generalisation/_controls --n 300
 ```
 
 ---
@@ -120,7 +119,7 @@ export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1  # bash
 pytest tests/ -v
 ```
 
-All tests should pass (71+ across 8 modules).
+All tests should pass (63 across 7 modules).
 
 ### Troubleshooting: `ModuleNotFoundError: No module named 'mlcheck'`
 
@@ -135,7 +134,7 @@ pip install python-pptx
 python scripts/build_presentation.py
 ```
 
-Writes `reports/presentation.pptx`.
+Writes `reports/presentation.pptx` (13 slides, speaker notes). Spoken lines: `reports/talk_script.md`. Q&A: `reports/qa_prep.md`.
 
 ---
 

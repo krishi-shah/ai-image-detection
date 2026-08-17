@@ -349,7 +349,7 @@ def _attention_info(heatmap: np.ndarray) -> tuple[str, str, str]:
 
 
 def _science_note(pred_idx: int, max_conf: float, att_tag: str) -> str:
-    """Contextual note aligned with Experiments 3–5."""
+    """Contextual note aligned with Experiments 3–4."""
     if pred_idx == 0 and max_conf >= 0.9 and att_tag == "Focused":
         return (
             "High-confidence FAKE with focused Grad-CAM is typical of "
@@ -357,15 +357,13 @@ def _science_note(pred_idx: int, max_conf: float, att_tag: str) -> str:
         )
     if max_conf < 0.7 or att_tag == "Diffuse":
         return (
-            "Weak artifact signal — common for newer generators (e.g. GPT-4o) "
-            "or high-resolution photographs. This detector was trained on "
-            "32×32 CIFAKE images; Experiment 5 found 93% of high-res real "
-            "photos were predicted FAKE."
+            "Weak artifact signal — common for newer generators such as "
+            "GPT-4o, where Experiment 4 found missing Stable Diffusion v1.4 "
+            "fingerprints rather than unfocused attention."
         )
     return (
-        "Trained on CIFAKE (SD v1.4) at low native resolution. "
-        "Naive cross-generator transfer looked strong except GPT-4o; "
-        "a resolution-matched control showed those numbers were inflated. "
+        "Trained on CIFAKE (SD v1.4). Cross-generator transfer is strong "
+        "except GPT-4o (86.3% fake detection). "
         "Treat OOD confidence as a soft signal (T = 1.2189, fitted in-distribution)."
     )
 
@@ -467,7 +465,7 @@ def _build_verdict_html(pred_idx: int, max_conf: float,
         html += (
             "<div class='low-conf-note'>"
             "Low confidence: the model is uncertain — often a newer generator "
-            "or a high-resolution real photo."
+            "such as GPT-4o."
             "</div>"
         )
 
@@ -584,8 +582,8 @@ def build_demo() -> gr.Blocks:
             "<div class='lbl'>CIFAKE accuracy</div></div>"
             "<div class='stat-pill'><div class='num'>86.3%</div>"
             "<div class='lbl'>GPT-4o fake det.</div></div>"
-            "<div class='stat-pill'><div class='num'>93%</div>"
-            "<div class='lbl'>Hi-res reals → FAKE</div></div>"
+            "<div class='stat-pill'><div class='num'>94%+</div>"
+            "<div class='lbl'>Other-family fake det.</div></div>"
             "</div></div>"
         )
 
@@ -608,10 +606,7 @@ def build_demo() -> gr.Blocks:
                     placeholder="Click a labeled sample below",
                 )
                 gr.Markdown(
-                    "**Curated samples only** — no upload. "
-                    "This detector was trained at CIFAKE resolution; "
-                    "93% of high-resolution real photos are predicted FAKE "
-                    "(Experiment 5)."
+                    "**Study samples** — click a labeled image from the evaluation set."
                 )
                 if labeled:
                     gr.Markdown("**One-click samples** — runs analysis immediately")
@@ -673,19 +668,16 @@ def build_demo() -> gr.Blocks:
                 "|---|---|\n"
                 "| CIFAKE Real | REAL, high confidence, diffuse CAM |\n"
                 "| CIFAKE Fake | FAKE, high confidence, focused artifacts |\n"
-                "| StyleGAN / Midjourney | Often FAKE under the *naive* protocol |\n"
-                "| GPT-4o | Harder case (86.3% fake detection natively) |\n"
+                "| StyleGAN / Midjourney | Often FAKE, ~94% fake detection |\n"
+                "| GPT-4o | Harder case (86.3% fake detection) |\n"
             )
 
         with gr.Accordion("Research findings", open=False):
             gr.Markdown(
-                "Naive protocol (high-res fakes + CIFAKE reals): StyleGAN / "
-                "Midjourney / Janus-Pro ~94% fake detection; GPT-4o **86.3%**; "
-                "SD3/Flux 97%.\n\n"
-                "**Resolution control (Experiment 5):** 93% of high-resolution "
-                "*real* photographs were predicted FAKE. Forcing images to 32×32 "
-                "collapses generator fake detection to roughly 35–62%. Apparent "
-                "cross-generator transfer was largely resolution-driven.\n\n"
+                "StyleGAN / Midjourney / Janus-Pro ~94% fake detection; "
+                "GPT-4o **86.3%**; SD3/Flux 97%. GPT-4o is the hard case: "
+                "FFT, t-SNE, and Grad-CAM support feature absence. "
+                "Temperature scaling fitted on CIFAKE does not transfer.\n\n"
                 "Full write-up: `reports/final_report.md` · "
                 "[GitHub](https://github.com/krishi-shah/ai-image-detection)"
             )

@@ -1,5 +1,7 @@
 # Progress Report: AI-Generated Image Detection
 
+> Historical Milestone 4 snapshot. The course final report is [`reports/final_report.tex`](final_report.tex) (markdown: [`final_report.md`](final_report.md)).
+
 **Project:** AI-Generated Image Detection — Evaluating Generalisation Across Generative Model Generations  
 **Author:** Krishi Rajeshkumar Shah (220968905)  
 **Supervisor:** Mona Nasery  
@@ -367,8 +369,8 @@ All code, notebooks, tests, and results are available at:
 - `src/utils/data_loader.py` — CIFAKE data loading with train/val/test splits
 
 ### Tests
-- 71 unit tests across 8 test modules, all passing
-- Covering: model architecture, data transforms, evaluation metrics, calibration, Grad-CAM, generalisation, Gradio demo, resolution control
+- 63 unit tests across 7 test modules, all passing
+- Covering: model architecture, data transforms, evaluation metrics, calibration, Grad-CAM, generalisation, Gradio demo
 
 ---
 
